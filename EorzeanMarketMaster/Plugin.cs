@@ -6,6 +6,7 @@ using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using EorzeanMarketMaster.Probe;
 using EorzeanMarketMaster.Ui;
 
 namespace EorzeanMarketMaster;
@@ -19,6 +20,14 @@ public sealed class Plugin : IDalamudPlugin
     [PluginService] internal static IPlayerState PlayerState { get; private set; } = null!;
     [PluginService] internal static IPluginLog Log { get; private set; } = null!;
 
+    // Services the #18 observation harness needs. They are read-only surfaces; nothing here writes
+    // to the game.
+    [PluginService] internal static IFramework Framework { get; private set; } = null!;
+    [PluginService] internal static IChatGui ChatGui { get; private set; } = null!;
+    [PluginService] internal static ICondition Condition { get; private set; } = null!;
+    [PluginService] internal static IGameGui GameGui { get; private set; } = null!;
+    [PluginService] internal static IDataManager DataManager { get; private set; } = null!;
+
     private const string CommandName = "/emm";
 
     public Configuration Configuration { get; init; }
@@ -30,10 +39,16 @@ public sealed class Plugin : IDalamudPlugin
     private readonly MainWindow mainWindow;
     private readonly ConfigWindow configWindow;
     private readonly SelfTest selfTest;
+    private readonly LiveProbe probe;
+    private readonly AutoRetainerWatch autoRetainer;
 
     public Plugin()
     {
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
+
+        // AutoRetainerApi reads its plugin interface off ECommons' static Svc, so ECommons has to be
+        // initialised before one can be constructed. No modules: EMM uses none of them.
+        ECommons.ECommonsMain.Init(PluginInterface, this);
 
         // A dev-loaded plugin reads its icon from images/icon.png beside the DLL. The same file
         // backs the rail logo, so the UI and the installer entry cannot drift apart.
@@ -46,9 +61,13 @@ public sealed class Plugin : IDalamudPlugin
         windowSystem.AddWindow(configWindow);
         selfTest = new SelfTest(mainWindow, Configuration);
 
+        // The #18 live-session harness. Observation only; see LiveProbe's class comment.
+        probe = new LiveProbe();
+        autoRetainer = new AutoRetainerWatch(probe, probe.WriteEntry);
+
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
-            HelpMessage = "Open Eorzean Market Master. /emm config opens its settings, /emm selftest checks the UI.",
+            HelpMessage = "Open Eorzean Market Master. /emm config opens its settings, /emm selftest checks the UI, /emm probe drives the live-session harness.",
         });
 
         PluginInterface.UiBuilder.Draw += DrawUi;
@@ -69,6 +88,12 @@ public sealed class Plugin : IDalamudPlugin
         mainWindow.Dispose();
         configWindow.Dispose();
 
+        // AutoRetainer first: if a postprocess window is somehow open, it has to be closed before
+        // the subscription that can close it goes away.
+        autoRetainer.Dispose();
+        probe.Dispose();
+        ECommons.ECommonsMain.Dispose();
+
         CommandManager.RemoveHandler(CommandName);
     }
 
@@ -81,7 +106,10 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OnCommand(string command, string args)
     {
-        switch (args.Trim().ToLowerInvariant())
+        var trimmed = args.Trim();
+        var verb = trimmed.Split(' ', 2)[0].ToLowerInvariant();
+
+        switch (verb)
         {
             case "config":
                 ToggleConfigUi();
@@ -89,11 +117,85 @@ public sealed class Plugin : IDalamudPlugin
             case "selftest":
                 selfTest.Start();
                 break;
+            case "probe":
+                OnProbeCommand(trimmed.Length > verb.Length ? trimmed[(verb.Length + 1)..].Trim() : string.Empty);
+                break;
             default:
                 ToggleMainUi();
                 break;
         }
     }
+
+    /// <summary>
+    /// The #18 harness's controls. Every one of these is a read except `arm` and `suppress`, and
+    /// those two are spelled out rather than folded into a general switch precisely because they
+    /// are the ones that touch the player's retainer run.
+    /// </summary>
+    private void OnProbeCommand(string args)
+    {
+        var parts = args.Split(' ', 2);
+        var verb = parts[0].ToLowerInvariant();
+        var rest = parts.Length > 1 ? parts[1].Trim() : string.Empty;
+
+        switch (verb)
+        {
+            case "retainers":
+                probe.DumpRetainers("command");
+                Echo("retainer summaries written to probe.log");
+                break;
+            case "market":
+                probe.DumpMarket("command");
+                Echo("market container written to probe.log");
+                break;
+            case "logmsg":
+                probe.DumpLogMessages();
+                Echo("LogMessage rows written to probe.log");
+                break;
+            case "ar":
+                autoRetainer.Attach();
+                Echo(autoRetainer.Status());
+                break;
+            case "arm":
+                if (!autoRetainer.Attached)
+                {
+                    Echo("attach first: /emm probe ar");
+                    break;
+                }
+
+                autoRetainer.Arm();
+                Echo("ARMED — EMM will take a postprocess turn on the next retainer, read it, and hand back immediately.");
+                break;
+            case "disarm":
+                autoRetainer.Disarm();
+                Echo("disarmed");
+                break;
+            case "suppress":
+                var wanted = rest.Equals("on", StringComparison.OrdinalIgnoreCase);
+                Echo(autoRetainer.SetSuppressed(wanted)
+                    ? $"AutoRetainer suppressed={wanted}"
+                    : "could not set suppression (attach first: /emm probe ar)");
+                break;
+            case "note":
+                probe.Note(rest);
+                Echo($"noted: {rest}");
+                break;
+            case "chat":
+                var chatOn = !rest.Equals("off", StringComparison.OrdinalIgnoreCase);
+                probe.SetChatCapture(chatOn, 10);
+                Echo(chatOn
+                    ? "capturing ALL chat and LogMessage rows for 10 min - say something to prove the listener is alive"
+                    : "chat capture off");
+                break;
+            default:
+                Echo($"probe log: {probe.LogPath}");
+                Echo(probe.LivenessSummary());
+                Echo(autoRetainer.Status());
+                Echo("retainers | market | logmsg | ar | arm | disarm | suppress on|off | chat on|off | note <text>");
+                break;
+        }
+    }
+
+    private static void Echo(string message) => ChatGui.Print($"[EMM probe] {message}");
 
     private void ToggleConfigUi() => configWindow.Toggle();
 

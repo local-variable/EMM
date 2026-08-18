@@ -1,0 +1,29 @@
+# Build output
+bin/
+obj/
+[Bb]uild/
+*.dll
+*.pdb
+*.zip
+
+# The plugin's own packaged artifacts are build output, produced by DalamudPackager
+# into bin/x64/Release/EorzeanMarketMaster/ and never committed.
+
+# Visual Studio / Rider / VS Code
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.csproj.user
+
+# NuGet
+*.nupkg
+packages/
+
+# Operating system
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+
+  <!--
+    The SDK supplies the target framework (net10.0-windows), language version, x64 platform,
+    nullable context, and every Dalamud reference. Do not restate them here.
+    InternalName, AssemblyVersion and DalamudApiLevel are written by DalamudPackager from the
+    assembly itself and must never be authored by hand.
+    AssemblyName defaults to this file's name, so this file's name IS the permanent InternalName.
+  -->
+
+  <PropertyGroup>
+    <Version>0.0.0.1</Version>
+  </PropertyGroup>
+
+  <!-- Manifest fields. Copy settled on issue #8; see docs/plugin-metadata.md. -->
+  <PropertyGroup>
+    <Author>the maintainer</Author>
+    <Name>Eorzean Market Master</Name>
+    <Punchline>Strategy-driven pricing and automatic intelligent relisting across every retainer.</Punchline>
+    <Description>Eorzean Market Master is a marketboard companion for players who run retainers in earnest.
+
+Configure a pricing strategy once — undercut behaviour, a price floor, a minimum margin over what the item cost you — assign it to a ware or a group of wares, and EMM applies it across every retainer on every character you play. It lists, reprices and relists on its own, so upkeep is limited to enrolling new wares rather than revisiting old ones.
+
+Prices are drawn from the live marketboard and from Universalis, and every figure carries its age and the number of sales behind it. A price resting on three sales from a fortnight ago is labelled as such rather than quoted as a price. EMM also records what you paid, so it can report profit and not merely revenue.
+
+EMM does not start from nothing. It reads the sale and price records the market plugins already on your machine have accumulated and folds them into its own history, so there is a body of past pricing behaviour to judge a strategy against from the first day rather than after months of collecting.
+
+Buying is covered as well as selling: what to acquire, at what ceiling, within the markets you can already reach.</Description>
+    <RepoUrl>https://github.com/local-variable/EMM</RepoUrl>
+    <Tags>marketboard;market board;market;retainer;retainers;pricing;price;undercut;relist;gil;universalis;profit;economy;trading</Tags>
+    <CategoryTags>inventory;utility</CategoryTags>
+    <IconUrl>https://raw.githubusercontent.com/local-variable/EMM/main/images/icon.png</IconUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!--
+      A dev-loaded plugin reads its icon from <directory of the DLL>/images/icon.png and ignores
+      IconUrl entirely, so this copy is the only way the icon is visible during development.
+      DalamudPackager lays the same path out again for the release zip.
+    -->
+    <Content Include="..\images\icon.png" Link="images\icon.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Visible>false</Visible>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Pinned to exactly what the installed AutoRetainer 4.6.1.27 was built against, read from the
+      ProductVersion of its shipped ECommons.dll. AutoRetainer publishes no version handshake, so
+      matching the live provider build-for-build is the only alignment available.
+      ECommons is MIT.
+    -->
+    <PackageReference Include="ECommons" Version="3.2.1.17" />
+
+    <!--
+      AutoRetainerAPI is not published to NuGet, so it is vendored as a submodule pinned at
+      7ccf0f6b4c7923821a43ed1e92456c9d5d7132f2 — the commit stamped into the AutoRetainerAPI.dll
+      that the installed AutoRetainer 4.6.1.27 ships. AutoRetainerAPI is MIT.
+    -->
+    <ProjectReference Include="..\vendor\AutoRetainerAPI\AutoRetainerAPI\AutoRetainerAPI.csproj" />
+  </ItemGroup>
+
+</Project>

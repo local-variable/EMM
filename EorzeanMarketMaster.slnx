@@ -1,0 +1,6 @@
+<Solution>
+  <Folder Name="/vendor/">
+    <Project Path="vendor/AutoRetainerAPI/AutoRetainerAPI/AutoRetainerAPI.csproj" />
+  </Folder>
+  <Project Path="EorzeanMarketMaster/EorzeanMarketMaster.csproj" />
+</Solution>

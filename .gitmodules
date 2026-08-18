@@ -1,0 +1,3 @@
+[submodule "vendor/AutoRetainerAPI"]
+	path = vendor/AutoRetainerAPI
+	url = https://github.com/PunishXIV/AutoRetainerAPI.git

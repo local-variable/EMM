@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using EorzeanMarketMaster.Core.Store;
 
 namespace EorzeanMarketMaster.Store;
@@ -34,6 +35,20 @@ internal sealed class StoreHost : IDisposable
 
     /// <summary>The open store, or null where it could not be opened.</summary>
     internal MarketStore? Store { get; }
+
+    /// <summary>
+    /// The one gate every touch of the store goes through.
+    ///
+    /// It lives here rather than inside whichever surface happened to need it first, because it is
+    /// a fact about the store and not about a surface: the store is a single SQLite connection,
+    /// a connection is not something two threads may share, and the moment a second reader existed
+    /// a gate owned by the first stopped protecting anything.
+    ///
+    /// Every caller takes it with a zero timeout and gives up rather than waiting. A frame that
+    /// blocked on a refresh in flight would be a frozen game, and every figure behind this gate is
+    /// hours old by nature - there is nothing worth waiting a frame for.
+    /// </summary>
+    internal SemaphoreSlim Gate { get; } = new(1, 1);
 
     /// <summary>
     /// One line for the log saying what happened. Not for the status strip: whether the engine
@@ -98,5 +113,9 @@ internal sealed class StoreHost : IDisposable
     }
 
     /// <inheritdoc/>
-    public void Dispose() => Store?.Dispose();
+    public void Dispose()
+    {
+        Store?.Dispose();
+        Gate.Dispose();
+    }
 }

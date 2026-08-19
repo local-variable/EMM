@@ -96,7 +96,11 @@ internal sealed class SelfTest
         // window shrinks on reports a scroll extent that does not exist and is gone by the next
         // frame. Measuring the settled frame is what makes NARROW-NO-HSCROLL a statement about the
         // layout rather than about the resize.
-        foreach (var section in new[] { 0, MainWindow.SectionCount - 1 })
+        // EVERY SECTION WITH A BODY, plus the first as a scaffold control. This used to be the
+        // first section and the last, which was right only while the last was the only one that
+        // drew anything: the moment a second body existed, the squeeze it had never been through
+        // was the one most likely to be wrong.
+        foreach (var section in MainWindow.BuiltSections.Prepend(0).Distinct())
         {
             plan.Add(new Step(false, section, new Vector2(640, 400), "narrow", Measure: false));
             plan.Add(new Step(false, section, new Vector2(640, 400), "narrow"));
@@ -108,8 +112,11 @@ internal sealed class SelfTest
         // submitted, clipped by the child, and invisible, which from the outside looks exactly
         // like a control that was never drawn. That is a whole in-game pass to diagnose, so the
         // configuration is now tested rather than assumed.
-        plan.Add(new Step(true, MainWindow.SectionCount - 1, new Vector2(640, 400), "narrow-rail", Measure: false));
-        plan.Add(new Step(true, MainWindow.SectionCount - 1, new Vector2(640, 400), "narrow-rail"));
+        foreach (var section in MainWindow.BuiltSections)
+        {
+            plan.Add(new Step(true, section, new Vector2(640, 400), "narrow-rail", Measure: false));
+            plan.Add(new Step(true, section, new Vector2(640, 400), "narrow-rail"));
+        }
 
         main.IsOpen = true;
         step = -1;
@@ -188,9 +195,38 @@ internal sealed class SelfTest
         // gets the check by being squeezed rather than by being remembered.
         if (s.ForcedSize is not null)
         {
-            Check($"NARROW-NO-HSCROLL [{tag}]",
-                UiProbe.BodyScrollMaxX <= 0.5f,
-                $"horizontal scroll extent {UiProbe.BodyScrollMaxX:F1}px (want 0)");
+            var over = UiProbe.Rows
+                .Where(row => row.ReachedX > UiProbe.RowRegionX + 0.5f)
+                .OrderByDescending(row => row.ReachedX)
+                .ToList();
+
+            // THE ASSERTION THAT MEANS WHAT THIS PHASE IS FOR. A control laid out past the content
+            // region is submitted, hit-testable and clipped - drawn and unseeable - which is the
+            // defect the narrow phase exists to catch, and it is measured here directly. The scroll
+            // extent below was only ever a proxy for it, and a proxy is what let a one-pixel
+            // accounting artefact read as a layout fault for five rounds.
+            //
+            // It is a stronger claim than the extent, not a weaker one: it names the row, and it
+            // caught the section separator overrunning a 400px region by 16px while every other
+            // measure said the section was fine.
+            Check($"NARROW-ROWS-FIT [{tag}]",
+                over.Count == 0,
+                over.Count == 0
+                    ? $"every row inside {UiProbe.RowRegionX:F1}px"
+                    : "past the content region: " +
+                      string.Join(", ", over.Select(row => $"'{row.Row}' {row.ReachedX:F1}px")));
+
+            var detail =
+                $"horizontal scroll extent {UiProbe.BodyScrollMaxX:F1}px (want 0)\n" +
+                $"region {UiProbe.RowRegionX:F1}  avail {UiProbe.BodyRegionAvailX:F1}  " +
+                $"winW {UiProbe.BodyWindowSizeX:F1}  bar {UiProbe.ScrollbarSize:F1}\n" +
+                string.Join("\n",
+                    UiProbe.Rows
+                        .OrderByDescending(row => row.ReachedX)
+                        .Take(10)
+                        .Select(row => $"  {row.ReachedX,7:F1}px  {row.Row}"));
+
+            Check($"NARROW-NO-HSCROLL [{tag}]", UiProbe.BodyScrollMaxX <= 0.5f, detail);
         }
     }
 
@@ -206,6 +242,13 @@ internal sealed class SelfTest
         Check("DEF-SECTION-ICONS",
             sections.Select(x => x.Icon).Distinct().Count() == sections.Count,
             "each section has its own glyph — two sections sharing one is unreadable in a collapsed rail");
+        // A name in the built-sections list matching no section would silently drop that section
+        // from the narrow phase - the coverage would go away without anything going red, which is
+        // the failure mode the whole harness exists to refuse.
+        Check("DEF-BUILT-SECTIONS",
+            MainWindow.BuiltSections.Count == MainWindow.BuiltNamed,
+            $"{MainWindow.BuiltSections.Count} of {MainWindow.BuiltNamed} named sections resolved");
+
         Check("DEF-SIZE-PRESETS",
             MainWindow.SizePresets.Length > 1 &&
             MainWindow.SizePresets.Zip(MainWindow.SizePresets.Skip(1), (a, b) => b.X > a.X && b.Y > a.Y).All(ok => ok),
@@ -245,6 +288,14 @@ internal sealed class SelfTest
         CheckContrast("CONTRAST-RAIL-SELECTED", Palette.Gold, railActive, UiTextContrast);
         CheckContrast("CONTRAST-ACCENT-ON-BODY", Palette.Gold, windowBg, UiTextContrast);
         CheckContrast("CONTRAST-MUTED-ON-BODY", Palette.Muted, windowBg, UiTextContrast);
+
+        // The two Quality colours, which are marks on a plot rather than text but are read the
+        // same way and fail the same way against a dark ground. Their separation FROM EACH OTHER
+        // under colour-vision deficiency was checked all-pairs in the graph prototype, in both
+        // light and dark; what is checked here is the thing that changes when a background does -
+        // whether either one can be seen at all.
+        CheckContrast("CONTRAST-QUALITY-NQ", Palette.QualityNormal, windowBg, UiTextContrast);
+        CheckContrast("CONTRAST-QUALITY-HQ", Palette.QualityHigh, windowBg, UiTextContrast);
     }
 
     /// <summary>
@@ -268,6 +319,26 @@ internal sealed class SelfTest
         return found;
     }
 
+    /// <summary>
+    /// The window-local x the body's content actually reached, derived from what ImGui reported.
+    ///
+    /// ImGui computes a window's horizontal scroll extent as
+    /// <c>ContentSize + WindowPadding*2 - InnerWidth</c>, where <c>ContentSize</c> is measured from
+    /// the content's start rather than from the window, and <c>InnerWidth</c> is the window less
+    /// its scrollbar. Every term but the cursor is now captured, so this inverts the formula and
+    /// hands back the one number the probe cannot read directly.
+    ///
+    /// It is what turns "1px from somewhere" into "something reached exactly here": if no tagged
+    /// row is at this figure, the overshoot is inside a black box rather than in EMM's layout.
+    /// </summary>
+    private static float CursorMax()
+    {
+        var inner = UiProbe.BodyWindowSizeX - UiProbe.ScrollbarSize;
+        var contentSize = UiProbe.BodyScrollMaxX - (UiProbe.WindowPadding * 2f) + inner;
+
+        return contentSize + UiProbe.WindowPadding;
+    }
+
     private void CheckContrast(string name, Vector4 fg, Vector4 bg, double minimum)
     {
         var ratio = Contrast(fg, bg);
@@ -287,8 +358,19 @@ internal sealed class SelfTest
         main.ActiveSection = savedSection;
 
         var failed = results.Where(r => !r.Pass).ToList();
+
+        // One line per line, rather than one line per case. A diagnostic that has to carry a
+        // region, four style figures and ten row widths does not fit a log line, and a reader who
+        // has to reassemble it from two screenshots is a reader who will skim it instead.
         foreach (var f in failed)
-            Plugin.Log.Error("[selftest] FAIL {Case} — {Detail}", f.Case, f.Detail);
+        {
+            var lines = f.Detail.Split('\n');
+
+            Plugin.Log.Error("[selftest] FAIL {Case} — {Detail}", f.Case, lines[0]);
+
+            foreach (var line in lines.Skip(1))
+                Plugin.Log.Error("[selftest]      {Line}", line);
+        }
 
         if (failed.Count == 0)
             Plugin.Log.Information("[selftest] {Pass}/{Total} passed", results.Count, results.Count);
@@ -322,6 +404,7 @@ internal sealed class SelfTest
 
         const int Listed = 5;
 
+        // Case names only. The detail is several lines now and chat is the wrong place for it.
         var named = string.Join(", ", failed.Take(Listed).Select(f => f.Case));
         var rest = failed.Count > Listed ? $", and {failed.Count - Listed} more" : string.Empty;
 

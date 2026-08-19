@@ -509,6 +509,94 @@ public sealed class MarketStore : IDisposable
     }
 
     /// <summary>
+    /// Every Sale of one Ware in one Market inside a time range, as one series.
+    ///
+    /// Returns a <see cref="History"/> rather than a bare list because the series is what callers
+    /// want and building it from a list is the step somebody eventually forgets - and the History
+    /// is what carries the rule that a Sale of another Ware or another Market cannot be in it.
+    ///
+    /// The rows come back in the order the table already clusters them, which is the order the
+    /// graph reads: the primary key leads on the Ware and then the instant, so this is a range
+    /// scan rather than a sort.
+    /// </summary>
+    /// <param name="ware">The Ware.</param>
+    /// <param name="world">The World whose Market the Sales happened in.</param>
+    /// <param name="from">Inclusive lower bound on the sale time.</param>
+    /// <param name="toExclusive">Exclusive upper bound.</param>
+    /// <returns>The series, empty where the store holds nothing in range.</returns>
+    public History ReadSales(
+        WareId ware,
+        WorldId world,
+        DateTimeOffset from,
+        DateTimeOffset toExclusive)
+    {
+        using var command = connection.CreateCommand();
+
+        command.CommandText =
+            $"""
+             SELECT sold_at, unit_price, stack, source
+             FROM {StoreSchema.MarketSale}
+             WHERE item_id = $item AND quality = $quality AND world_id = $world
+               AND sold_at >= $from AND sold_at < $to
+             ORDER BY sold_at
+             """;
+
+        Parameter(command, "$item", (long)ware.ItemId);
+        Parameter(command, "$quality", (long)ware.Quality);
+        Parameter(command, "$world", (long)world.Id);
+        Parameter(command, "$from", from.ToUnixTimeSeconds());
+        Parameter(command, "$to", toExclusive.ToUnixTimeSeconds());
+
+        var sales = new List<MarketSale>();
+
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            sales.Add(new MarketSale(
+                ware,
+                world,
+                DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(0)),
+                new UnitPrice(reader.GetInt64(1)),
+                (int)reader.GetInt64(2),
+                (Source)reader.GetInt64(3)));
+        }
+
+        return new History(ware, world, sales);
+    }
+
+    /// <summary>
+    /// When the oldest Sale the store holds for one Ware in one Market happened.
+    ///
+    /// What bounds an "all of History" window. Asked separately rather than read off a full range
+    /// scan because the answer is one index seek and the scan it would replace is the entire
+    /// series - which for a liquid Ware is thousands of rows fetched to look at the first.
+    /// </summary>
+    /// <param name="ware">The Ware.</param>
+    /// <param name="world">The World.</param>
+    /// <returns>The oldest Sale's instant, or null where the store holds none.</returns>
+    public DateTimeOffset? OldestSaleAt(WareId ware, WorldId world)
+    {
+        using var command = connection.CreateCommand();
+
+        command.CommandText =
+            $"""
+             SELECT MIN(sold_at) FROM {StoreSchema.MarketSale}
+             WHERE item_id = $item AND quality = $quality AND world_id = $world
+             """;
+
+        Parameter(command, "$item", (long)ware.ItemId);
+        Parameter(command, "$quality", (long)ware.Quality);
+        Parameter(command, "$world", (long)world.Id);
+
+        var value = command.ExecuteScalar();
+
+        return value is null or DBNull
+            ? null
+            : DateTimeOffset.FromUnixTimeSeconds(Convert.ToInt64(value, CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>
     /// Removes one week of raw Snapshots by dropping its table, and rebuilds the view over what is
     /// left.
     ///

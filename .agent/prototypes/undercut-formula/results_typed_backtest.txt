@@ -1,0 +1,115 @@
+﻿undercut-formula prototype, stage 6 - typed back-test - 2026-08-17T17:46Z
+
+================================================================================================================
+Materia  -  13 Wares  |  median gap between sales 0.4d  |  horizon 3d, step 1d, window 30d
+================================================================================================================
+  policy            wins/slot-day  wins/decision  rel slot-day  rel per-unit  hold rate
+  -------------------------------------------------------------------------------------
+  floor 90%                  38%            54%          0.91          1.00        66%
+  floor 80%                  15%            23%          0.82          0.94        54%
+  floor 70%                   0%             0%          0.82          0.90        46%
+  q25 (30d)                  31%             8%          0.84          0.80         0%
+  median (30d)                0%             0%          0.60          0.79         0%
+  trimmed mean                0%             8%          0.48          0.77         0%
+  undercut -1g                0%             0%          0.75          0.70         0%
+  undercut -5%               15%             8%          0.75          0.68         0%
+  match                       0%             0%          0.74          0.68         0%
+  median +10%                 0%             0%          0.44          0.60         0%
+
+  wins = share of Wares where the policy scored top on that metric.
+  rel  = the policy's score as a fraction of the best policy on that Ware, median.
+
+================================================================================================================
+Material  -  126 Wares  |  median gap between sales 1.3d  |  horizon 8d, step 1d, window 30d
+================================================================================================================
+  policy            wins/slot-day  wins/decision  rel slot-day  rel per-unit  hold rate
+  -------------------------------------------------------------------------------------
+  floor 90%                  22%            33%          0.79          0.95        66%
+  floor 80%                  11%            14%          0.78          0.89        59%
+  trimmed mean               10%            19%          0.59          0.88         0%
+  floor 70%                  19%             7%          0.85          0.86        53%
+  median (30d)                6%            10%          0.65          0.81         0%
+  median +10%                 4%            18%          0.50          0.76         0%
+  q25 (30d)                  25%             6%          0.80          0.66         0%
+  undercut -5%                7%             2%          0.75          0.60         0%
+  match                       6%             1%          0.69          0.59         0%
+  undercut -1g                2%             0%          0.69          0.59         0%
+
+  wins = share of Wares where the policy scored top on that metric.
+  rel  = the policy's score as a fraction of the best policy on that Ware, median.
+
+================================================================================================================
+Consumable  -  42 Wares  |  median gap between sales 6.9d  |  horizon 42d, step 6d, window 42d
+================================================================================================================
+  policy            wins/slot-day  wins/decision  rel slot-day  rel per-unit  hold rate
+  -------------------------------------------------------------------------------------
+  trimmed mean               17%            55%          0.55          1.00         0%
+  median +10%                 5%            21%          0.21          0.88         0%
+  median (30d)               17%            17%          0.54          0.87         0%
+  floor 90%                  10%             5%          0.62          0.85        67%
+  floor 80%                  14%             5%          0.86          0.83        63%
+  floor 70%                  17%             7%          0.87          0.73        59%
+  q25 (30d)                  29%             0%          0.80          0.67         0%
+  match                      14%             0%          0.49          0.24         0%
+  undercut -1g                2%             0%          0.45          0.24         0%
+  undercut -5%                7%             0%          0.51          0.23         0%
+
+  wins = share of Wares where the policy scored top on that metric.
+  rel  = the policy's score as a fraction of the best policy on that Ware, median.
+
+================================================================================================================
+Gear  -  70 Wares  |  median gap between sales 12.9d  |  horizon 60d, step 8d, window 60d
+================================================================================================================
+  policy            wins/slot-day  wins/decision  rel slot-day  rel per-unit  hold rate
+  -------------------------------------------------------------------------------------
+  median +10%                10%            53%          0.18          1.00         0%
+  floor 90%                  13%             4%          1.00          0.94        68%
+  trimmed mean               10%            27%          0.23          0.94         0%
+  median (30d)                7%             7%          0.38          0.91         0%
+  floor 80%                  16%             6%          0.70          0.85        60%
+  floor 70%                  21%             4%          0.73          0.75        54%
+  q25 (30d)                  14%             4%          0.54          0.74         0%
+  match                      21%             1%          0.58          0.42         0%
+  undercut -1g                1%             0%          0.58          0.42         0%
+  undercut -5%                4%             0%          0.61          0.40         0%
+
+  wins = share of Wares where the policy scored top on that metric.
+  rel  = the policy's score as a fraction of the best policy on that Ware, median.
+
+================================================================================================================
+Furnishing  -  83 Wares  |  median gap between sales 4.5d  |  horizon 27d, step 3d, window 30d
+================================================================================================================
+  policy            wins/slot-day  wins/decision  rel slot-day  rel per-unit  hold rate
+  -------------------------------------------------------------------------------------
+  trimmed mean                8%            33%          0.31          0.93         0%
+  median (30d)                2%            10%          0.31          0.89         0%
+  floor 90%                  28%            23%          0.84          0.89        68%
+  floor 80%                  23%            16%          0.72          0.87        57%
+  median +10%                 1%            17%          0.22          0.85         0%
+  floor 70%                  14%            11%          0.69          0.80        52%
+  q25 (30d)                  12%             4%          0.46          0.76         0%
+  match                       7%             1%          0.54          0.60         0%
+  undercut -1g                2%             0%          0.54          0.60         0%
+  undercut -5%               17%             2%          0.63          0.58         0%
+
+  wins = share of Wares where the policy scored top on that metric.
+  rel  = the policy's score as a fraction of the best policy on that Ware, median.
+
+================================================================================================================
+Collectible  -  62 Wares  |  median gap between sales 2.9d  |  horizon 17d, step 2d, window 30d
+================================================================================================================
+  policy            wins/slot-day  wins/decision  rel slot-day  rel per-unit  hold rate
+  -------------------------------------------------------------------------------------
+  floor 90%                  26%            26%          0.77          0.90        58%
+  floor 80%                  21%            18%          0.68          0.89        50%
+  trimmed mean                6%            23%          0.35          0.89         0%
+  floor 70%                  15%            10%          0.75          0.87        43%
+  median (30d)                2%             5%          0.38          0.85         0%
+  q25 (30d)                   8%             6%          0.53          0.77         0%
+  undercut -5%               29%             8%          0.87          0.72         0%
+  undercut -1g                0%             0%          0.63          0.71         0%
+  match                       8%             3%          0.63          0.70         0%
+  median +10%                 3%            11%          0.21          0.68         0%
+
+  wins = share of Wares where the policy scored top on that metric.
+  rel  = the policy's score as a fraction of the best policy on that Ware, median.

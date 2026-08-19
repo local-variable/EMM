@@ -1,0 +1,140 @@
+﻿undercut-formula prototype, stage 4 - stack size - 2026-08-17T17:42Z
+
+================================================================================================================
+TABLE D - does a bigger stack fetch a worse UNIT price?
+         Spearman rank correlation of stack size against unit price, one per Ware,
+         computed only on Wares that actually trade in varied stack sizes.
+================================================================================================================
+  ware type        wares  median rho      p10      p90  % negative  % rho<-0.3
+  ----------------------------------------------------------------------------
+  Materia             13        0.07    -0.02     0.13        15%          0%
+  Material           123       -0.02    -0.21     0.17        56%          5%
+  Consumable          52       -0.04    -0.33     0.13        60%         12%
+  Gear                 5       -0.05    -0.31     0.00        60%         20%
+
+  Negative rho = a bulk discount: larger stacks change hands at a lower unit price.
+
+================================================================================================================
+TABLE E - which stack sizes CLEAR, and which SIT
+         Per Ware: share of the last 180d of sale events in each bucket, against
+         that bucket's share of the units sitting on the board right now.
+         Median across Wares of the type. Ratio > 1 = clears faster than it is listed.
+================================================================================================================
+
+  Materia  (13 Wares with varied stacks and a live book)
+        stack  % of sales   % of book  clear ratio
+    ----------------------------------------------
+            1      49.5%      45.8%         1.08
+          2-9      35.1%      27.8%         1.26
+        10-19       7.6%       6.7%         1.14
+        20-49       4.8%       6.2%         0.78
+        50-98       1.8%       4.2%         0.44
+           99       1.1%       9.3%         0.12  <- sits
+
+  Material  (140 Wares with varied stacks and a live book)
+        stack  % of sales   % of book  clear ratio
+    ----------------------------------------------
+            1      36.6%      31.4%         1.16
+          2-9      35.1%      31.4%         1.12
+        10-19       7.7%       9.4%         0.82
+        20-49       8.7%      11.9%         0.73
+        50-98       3.7%       5.5%         0.67
+           99       7.5%       9.6%         0.78
+
+  Consumable  (57 Wares with varied stacks and a live book)
+        stack  % of sales   % of book  clear ratio
+    ----------------------------------------------
+            1      29.0%      28.2%         1.03
+          2-9      38.4%      24.3%         1.58
+        10-19       9.0%      14.6%         0.61
+        20-49       9.4%      12.9%         0.73
+        50-98       5.0%       6.1%         0.83
+           99       9.2%      13.9%         0.67
+
+  Gear  (5 Wares with varied stacks and a live book)
+        stack  % of sales   % of book  clear ratio
+    ----------------------------------------------
+            1       7.1%      13.3%         0.53  <- sits
+          2-9      14.6%       6.5%         2.24  <- clears
+        10-19      26.4%       7.6%         3.49  <- clears
+        20-49      18.5%      28.3%         0.65
+        50-98      13.9%      21.0%         0.66
+           99      19.6%      23.3%         0.84
+
+  Collectible  (31 Wares with varied stacks and a live book)
+        stack  % of sales   % of book  clear ratio
+    ----------------------------------------------
+            1      98.1%      97.5%         1.01
+          2-9       1.9%       2.5%         0.76
+
+================================================================================================================
+TABLE F - expected gil per slot-day by stack bucket
+         value = median unit price in the bucket x bucket units, divided by an
+         estimated days-to-clear (units on the board in that bucket / units sold
+         per day in that bucket). Aggregated as the median across Wares of the type,
+         each Ware's buckets first normalised to its own best bucket = 1.00.
+================================================================================================================
+
+  Materia  (13 Wares)
+        stack   wares  relative value
+    ---------------------------------
+            1      13            0.04  #
+          2-9      13            0.03  #
+        10-19      11            0.28  ########
+        20-49      10            0.28  ########
+        50-98       8            0.34  ##########  <- best
+           99       9            0.25  #######
+
+  Material  (120 Wares)
+        stack   wares  relative value
+    ---------------------------------
+            1     113            0.01  
+          2-9     119            0.04  #
+        10-19      92            0.13  ####
+        20-49      84            0.20  ######
+        50-98      66            0.48  ##############
+           99      56            0.90  ###########################  <- best
+
+  Consumable  (45 Wares)
+        stack   wares  relative value
+    ---------------------------------
+            1      38            0.04  #
+          2-9      45            0.15  ####
+        10-19      30            0.08  ##
+        20-49      30            0.38  ###########
+        50-98      22            0.57  #################  <- best
+           99      20            0.36  ###########
+
+  Gear  (5 Wares)
+        stack   wares  relative value
+    ---------------------------------
+        10-19       5            0.43  #############  <- best
+        20-49       5            0.00  
+
+  Collectible  (5 Wares)
+        stack   wares  relative value
+    ---------------------------------
+            1       5            1.00  ##############################  <- best
+          2-9       5            0.62  ##################
+
+================================================================================================================
+TABLE G - paired within-Ware comparison: is a full stack worse than a mid stack?
+         Only Wares that traded in BOTH buckets. Sign test on the per-Ware direction.
+================================================================================================================
+  ware type            buckets  wares  mid wins  full wins  p (2-sided)   verdict
+  -----------------------------------------------------------------------------------------
+  Materia          20-49 vs 99      9         5          4        1.000   no difference
+  Materia          10-19 vs 99      9         3          6        0.508   no difference
+  Materia            2-9 vs 99      9         0          9        0.004   99 beats 2-9
+  Material         50-98 vs 99     54        17         37        0.009   99 beats 50-98
+  Material         20-49 vs 99     55        11         44        0.000   99 beats 20-49
+  Material         10-19 vs 99     55        14         41        0.000   99 beats 10-19
+  Material           2-9 vs 99     55         8         47        0.000   99 beats 2-9
+  Consumable       50-98 vs 99     19        11          8        0.648   no difference
+  Consumable       20-49 vs 99     20         8         12        0.503   no difference
+  Consumable       10-19 vs 99     19         3         16        0.004   99 beats 10-19
+  Consumable         2-9 vs 99     20         3         17        0.003   99 beats 2-9
+
+  Sign test only - it asks which direction, never how big, and it is blind to
+  the size of the gap. Both buckets are scored on the same crude days-to-clear
+  estimate, so a bias in that estimate cancels within a pair but not across types.

@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EMM Market View</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --card: #202020;
+    --ink: #ffffff; --ink-2: #c3c2b7; --ink-3: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --nq: #3987e5; --hq: #d95926; --you: #199e70;
+    --ok: #0ca30c; --caution: #fab219; --warning: #ec835a; --severe: #d03b3b;
+    --chip: #262625; --chip-on: #33332f;
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --page: #f9f9f7; --surface: #fcfcfb; --card: #ffffff;
+    --ink: #0b0b0b; --ink-2: #52514e; --ink-3: #898781;
+    --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10);
+    --nq: #2a78d6; --hq: #eb6834; --you: #1baf7a;
+    --chip: #f0efec; --chip-on: #e3e2dc;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--page); color: var(--ink);
+    font: 13px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .app { max-width: 1440px; margin: 0 auto; padding: 14px 16px 40px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 8px; }
+  header h1 { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: .01em; }
+  header h1 span { color: var(--ink-3); font-weight: 400; margin-left: 8px; }
+  .spacer { flex: 1; }
+  select { background: var(--chip); color: var(--ink); border: 1px solid var(--border); border-radius: 6px;
+    padding: 5px 8px; font: inherit; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--chip); }
+  .seg button { background: transparent; color: var(--ink-2); border: 0; padding: 5px 10px; font: inherit; cursor: pointer; }
+  .seg button + button { border-left: 1px solid var(--border); }
+  .seg button.on { background: var(--chip-on); color: var(--ink); font-weight: 600; }
+  .seg button:disabled { opacity: .35; cursor: default; }
+  .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 8px 0 10px; border-bottom: 1px solid var(--border); margin-bottom: 10px; }
+  .filters label { color: var(--ink-3); font-size: 12px; margin-right: 4px; }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; }
+  @media (max-width: 980px) { .layout { grid-template-columns: 1fr; } }
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 10px 6px; position: relative; }
+  .chart-title { display: flex; align-items: baseline; gap: 10px; padding: 2px 6px 6px; flex-wrap: wrap; }
+  .chart-title b { font-size: 15px; font-weight: 600; }
+  .chart-title .sub { color: var(--ink-3); font-size: 12px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 6px 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); background: var(--chip);
+    color: var(--ink-2); border-radius: 999px; padding: 3px 10px 3px 8px; font-size: 12px; cursor: pointer; user-select: none; }
+  .chip.on { background: var(--chip-on); color: var(--ink); }
+  .chip .sw { width: 12px; height: 12px; display: inline-block; border-radius: 3px; }
+  .chip .sw.line { height: 2px; border-radius: 1px; width: 14px; }
+  .chip .sw.dot { border-radius: 50%; }
+  .chip .sw.hatch { background: repeating-linear-gradient(135deg, currentColor 0 2px, transparent 2px 5px); opacity: .7; }
+  canvas { display: block; width: 100%; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); margin: 0 0 8px; font-weight: 600; }
+  .hero { font-size: 28px; font-weight: 600; letter-spacing: -.01em; line-height: 1.1; }
+  .hero small { font-size: 12px; color: var(--ink-3); font-weight: 400; margin-left: 6px; }
+  .tag { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--ink-2); vertical-align: middle; }
+  .tag i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .tag.ok i { background: var(--ok); } .tag.caution i { background: var(--caution); }
+  .tag.warning i { background: var(--warning); } .tag.severe i { background: var(--severe); }
+  .box { border-left: 3px solid var(--caution); background: color-mix(in srgb, var(--caution) 10%, transparent);
+    padding: 8px 10px; border-radius: 6px; margin: 8px 0 4px; font-size: 12px; color: var(--ink-2); }
+  .box.warning { border-color: var(--warning); background: color-mix(in srgb, var(--warning) 10%, transparent); }
+  .box.severe { border-color: var(--severe); background: color-mix(in srgb, var(--severe) 12%, transparent); }
+  .box b { color: var(--ink); }
+  table.kv { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  table.kv td { padding: 4px 0; border-top: 1px solid var(--border); vertical-align: top; }
+  table.kv td:first-child { color: var(--ink-3); width: 46%; padding-right: 8px; }
+  table.kv td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  table.kv td .muted { color: var(--ink-3); font-size: 11px; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .side { display: flex; flex-direction: column; gap: 12px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 8px 6px 4px; color: var(--ink-3); font-size: 12px; border-top: 1px solid var(--border); margin-top: 4px; }
+  .legend span { white-space: nowrap; }
+  .legend .k { display: inline-block; vertical-align: middle; margin-right: 5px; }
+  .tip { position: absolute; pointer-events: none; background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font-size: 12px; box-shadow: 0 6px 20px rgba(0,0,0,.25); min-width: 190px; display: none; z-index: 5; }
+  .tip .d { color: var(--ink-3); margin-bottom: 4px; }
+  .tip .r { display: flex; justify-content: space-between; gap: 14px; }
+  .tip .r b { font-variant-numeric: tabular-nums; }
+  .tip .r .l { color: var(--ink-2); }
+  .tip .k { display: inline-block; width: 12px; height: 2px; vertical-align: middle; margin-right: 6px; }
+  .tip .k.dot { width: 8px; height: 8px; border-radius: 50%; }
+  .tip hr { border: 0; border-top: 1px solid var(--border); margin: 6px 0; }
+  .tip .ev { color: var(--you); }
+  .tbl { margin-top: 10px; overflow-x: auto; }
+  .tbl table { border-collapse: collapse; width: 100%; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .tbl th, .tbl td { text-align: right; padding: 4px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .tbl th:first-child, .tbl td:first-child { text-align: left; }
+  .tbl th { color: var(--ink-3); font-weight: 500; }
+  .foot { color: var(--ink-3); font-size: 11px; margin-top: 12px; line-height: 1.5; }
+  .btn { background: var(--chip); color: var(--ink-2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; font: inherit; cursor: pointer; }
+  .btn.on { background: var(--chip-on); color: var(--ink); }
+  kbd { font: inherit; color: var(--ink-3); }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Eorzean Market Master <span>Market view — prototype for the graph design</span></h1>
+    <div class="spacer"></div>
+    <label style="color:var(--ink-3);font-size:12px">Ware</label>
+    <select id="ware"></select>
+    <div class="seg" id="qual">
+      <button data-q="nq">NQ</button><button data-q="hq">HQ</button><button data-q="both">Both</button>
+    </div>
+    <button class="btn" id="theme" title="Toggle light / dark">◐ Theme</button>
+  </header>
+
+  <div class="filters">
+    <label>Window</label>
+    <div class="seg" id="win">
+      <button data-w="7">7d</button><button data-w="14">14d</button><button data-w="30">30d</button>
+      <button data-w="60">60d</button><button data-w="90">90d</button><button data-w="180">180d</button><button data-w="all">All</button>
+    </div>
+    <label>Bucket</label>
+    <div class="seg" id="bucket">
+      <button data-b="auto">Auto</button><button data-b="6">6h</button><button data-b="24">1d</button><button data-b="72">3d</button><button data-b="168">1w</button>
+    </div>
+    <label>Marks</label>
+    <div class="seg" id="marks">
+      <button data-m="sales">Sales</button><button data-m="candles">Candles</button><button data-m="both">Both</button>
+    </div>
+    <label>Unit Price axis</label>
+    <div class="seg" id="yaxis">
+      <button data-y="lin">Linear</button><button data-y="log">Log</button>
+    </div>
+    <button class="btn on" id="clip" title="Fit the axis to the middle 96% of Sales; outliers pin to the edge with an arrow">Clip outliers</button>
+    <div class="spacer"></div>
+    <span style="color:var(--ink-3);font-size:12px" id="scope"></span>
+  </div>
+
+  <div class="layout">
+    <div>
+      <div class="chart-card">
+        <div class="chart-title"><b id="title"></b><span class="sub" id="subtitle"></span></div>
+        <div class="chips" id="layers"></div>
+        <canvas id="c"></canvas>
+        <div class="tip" id="tip"></div>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+        <button class="btn" id="tablebtn">Table view</button>
+        <span style="color:var(--ink-3);font-size:12px">Hover for the crosshair · <kbd>←</kbd> <kbd>→</kbd> step buckets · click a legend chip to toggle a layer</span>
+      </div>
+      <div class="tbl" id="tbl" style="display:none"></div>
+      <div class="foot" id="foot"></div>
+    </div>
+    <div class="side" id="side"></div>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+(() => {
+'use strict';
+const D = window.EMM_DATA;
+const DAY = 86400, HOUR = 3600;
+const $ = s => document.querySelector(s);
+
+// ---------- palette (read live from CSS so theme swaps everything) ----------
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const rgba = (hex, a) => {
+  const h = hex.replace('#', ''); const n = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
+  return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+};
+const P = () => ({
+  surface: css('--surface'), ink: css('--ink'), ink2: css('--ink-2'), ink3: css('--ink-3'),
+  grid: css('--grid'), axis: css('--axis'), nq: css('--nq'), hq: css('--hq'), you: css('--you'),
+  ok: css('--ok'), caution: css('--caution'), warning: css('--warning'), severe: css('--severe'),
+});
+
+// ---------- data prep ----------
+const items = new Map(); // id -> {nq, hq, name}
+for (const w of D.wares) {
+  const e = items.get(w.id) || { id: w.id, name: w.name, type: w.type, canBeHq: w.canBeHq };
+  e[w.hq ? 'hq' : 'nq'] = w; items.set(w.id, e);
+  w.sales = w.sales.map(s => ({ t: s[0], p: s[1], q: s[2], b: s[3] }));
+  w.est = w.estimate.map(e => ({ t: e[0], p: e[1], lo: e[2], hi: e[3], n: e[4], sev: e[5], basis: e[6] }));
+}
+const AS_OF = D.asOf;
+
+const state = {
+  item: 41145, q: 'nq', win: 30, bucket: 'auto', marks: 'sales', y: 'lin', clip: true,
+  // acts: OFF by default after review - the simulated Strategy replay was dropped as a feature (not useful to the end
+  // user); it stays here only as the prototype's stand-in for the Player's own recorded acts, which remain a layer.
+  layers: { sales: true, band: true, est: true, ribbon: true, book: true, ladder: true, acts: false, volume: true, dos: false, spread: true, window: true },
+  hover: null, focusBucket: null, table: false,
+};
+
+// ---------- small maths ----------
+const quantile = (sorted, q) => {
+  if (!sorted.length) return null; if (sorted.length === 1) return sorted[0];
+  const i = q * (sorted.length - 1), lo = Math.floor(i), hi = Math.min(lo + 1, sorted.length - 1);
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo);
+};
+const effN = rows => { // geometric mean of rows x distinct days x distinct buyers - the #11 rule
+  if (!rows.length) return 0;
+  const days = new Set(rows.map(s => Math.floor(s.t / DAY))).size;
+  const buyers = new Set(rows.map(s => s.b)).size || rows.length;
+  return Math.exp((Math.log(rows.length) + Math.log(days) + Math.log(buyers)) / 3);
+};
+const fmtGil = v => v == null ? '—' : v >= 1e6 ? (v / 1e6).toFixed(v >= 1e7 ? 1 : 2) + 'M' : v >= 1e4 ? Math.round(v / 1e3).toLocaleString() + 'k' : Math.round(v).toLocaleString();
+const fmtGilFull = v => v == null ? '—' : Math.round(v).toLocaleString();
+const fmtDate = t => { const d = new Date(t * 1000); return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); };
+const fmtDateTime = t => { const d = new Date(t * 1000); return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }); };
+const ago = secs => secs < HOUR ? Math.round(secs / 60) + ' min' : secs < DAY ? (secs / HOUR).toFixed(secs < 3 * HOUR ? 1 : 0) + ' h' : (secs / DAY).toFixed(secs < 3 * DAY ? 1 : 0) + ' d';
+
+// ---------- selection ----------
+function selection() {
+  const it = items.get(state.item);
+  const qs = state.q === 'both' ? ['nq', 'hq'] : [state.q];
+  return qs.map(q => it[q]).filter(Boolean);
+}
+function windowRange(wares) {
+  if (state.win === 'all') {
+    const first = Math.min(...wares.map(w => w.sales.length ? w.sales[0].t : AS_OF - 30 * DAY), ...wares.flatMap(w => w.listings.map(l => l.rt)));
+    const t0 = Math.min(first, AS_OF - 7 * DAY);
+    return [t0 - (AS_OF - t0) * 0.02, AS_OF]; // a little room so a Sample-cap marker at the first Sale is visible
+  }
+  return [AS_OF - state.win * DAY, AS_OF];
+}
+function bucketHours(t0, t1) {
+  if (state.bucket !== 'auto') return +state.bucket;
+  const days = (t1 - t0) / DAY;
+  return days <= 7 ? 6 : days <= 14 ? 12 : days <= 30 ? 24 : days <= 60 ? 48 : days <= 90 ? 72 : 144;
+}
+
+// ---------- the view model: everything the panes draw ----------
+function computeView() {
+  const wares = selection();
+  const [t0, t1] = windowRange(wares);
+  const bh = bucketHours(t0, t1), bw = bh * HOUR;
+  const start = Math.floor(t0 / bw) * bw;
+  const nb = Math.ceil((t1 - start) / bw);
+  const series = wares.map(w => {
+    const vis = w.sales.filter(s => s.t >= t0 && s.t <= t1);
+    // buckets
+    const buckets = [];
+    for (let i = 0; i < nb; i++) {
+      const a = start + i * bw, b = a + bw;
+      const rows = w.sales.filter(s => s.t >= a && s.t < b);
+      const ps = rows.map(s => s.p).sort((x, y) => x - y);
+      buckets.push({ a, b, mid: (a + b) / 2, rows, n: rows.length, units: rows.reduce((s, r) => s + r.q, 0),
+        o: rows.length ? rows[0].p : null, c: rows.length ? rows[rows.length - 1].p : null,
+        l: ps[0] ?? null, h: ps[ps.length - 1] ?? null, p25: quantile(ps, .25), p50: quantile(ps, .5), p75: quantile(ps, .75) });
+    }
+    // dispersion band: centred window that widens on thin data up to the type window, absent below 5 effective observations
+    const baseW = Math.max(bw * 3, DAY);
+    const maxW = w.params.window * DAY;
+    const band = buckets.map(bk => {
+      let half = baseW / 2, rows;
+      while (true) {
+        rows = w.sales.filter(s => s.t >= bk.mid - half && s.t <= Math.min(bk.mid + half, t1));
+        if (effN(rows) >= 5 || half * 2 >= maxW) break;
+        half *= 1.5;
+      }
+      const ne = effN(rows);
+      if (ne < 5) return { mid: bk.mid, ok: false, n: rows.length, ne };
+      const ps = rows.map(s => s.p).sort((x, y) => x - y);
+      return { mid: bk.mid, ok: true, n: rows.length, ne, width: half * 2,
+        p10: quantile(ps, .1), p25: quantile(ps, .25), p50: quantile(ps, .5), p75: quantile(ps, .75), p90: quantile(ps, .9) };
+    });
+    // estimate line, daily
+    const est = w.est.filter(e => e.t >= t0 - DAY && e.t <= t1);
+    // book: listings traced back
+    const book = w.listings.map(l => ({ ...l, from: Math.max(l.rt, t0) })).filter(l => l.rt <= t1);
+    // depth lower bound per bucket end + Days of Supply
+    const velWin = w.params.window * DAY;
+    const dos = buckets.map(bk => {
+      const tau = Math.min(bk.b, t1);
+      const depth = w.listings.filter(l => l.rt <= tau).reduce((s, l) => s + l.q, 0);
+      const sold = w.sales.filter(s => s.t > tau - velWin && s.t <= tau).reduce((s, r) => s + r.q, 0);
+      const vel = sold / (velWin / DAY);
+      const conf = w.listings.length ? Math.max(0, Math.min(1, (tau - Math.min(...w.listings.map(l => l.rt))) / Math.max(1, t1 - Math.min(...w.listings.map(l => l.rt))))) : 0;
+      return { tau, depth, vel, dos: vel > 0 ? depth / vel : (depth > 0 ? Infinity : 0), conf, isNow: bk.b >= t1 };
+    });
+    const acts = w.replay.filter(e => e.t >= t0 && e.t <= t1);
+    return { w, vis, buckets, band, est, book, dos, acts, bw };
+  });
+  // y domain
+  let vals = [];
+  for (const s of series) {
+    const ps = s.vis.map(x => x.p).sort((a, b) => a - b);
+    if (state.clip && ps.length > 20) vals.push(quantile(ps, .02), quantile(ps, .98)); else vals.push(...ps);
+    for (const b of s.band) if (b.ok) vals.push(b.p10, b.p90);
+    for (const e of s.est) if (e.p != null) vals.push(e.lo, e.hi);
+    for (const a of s.acts) if (a.price) vals.push(a.price);
+  }
+  vals = vals.filter(v => v != null && isFinite(v) && v > 0);
+  let lo = Math.min(...vals), hi = Math.max(...vals);
+  if (!isFinite(lo)) { // nothing but listings
+    const lp = series.flatMap(s => s.book.map(l => l.p)); lo = Math.min(...lp); hi = Math.max(...lp);
+    if (!isFinite(lo)) { lo = 1; hi = 10; }
+  }
+  // let listings widen the axis only within reason - a 100M troll listing must not flatten the chart
+  for (const s of series) for (const l of s.book) if (l.p >= lo * 0.5 && l.p <= hi * 2.5) { lo = Math.min(lo, l.p); hi = Math.max(hi, l.p); }
+  if (lo === hi) { lo *= 0.8; hi *= 1.2; }
+  const pad = state.y === 'log' ? 0 : (hi - lo) * 0.06;
+  const yd = state.y === 'log' ? [lo / 1.08, hi * 1.08] : [Math.max(0, lo - pad), hi + pad];
+  return { wares, series, t0, t1, bw, start, nb, yd };
+}
+
+// ---------- layout ----------
+const canvas = $('#c'), ctx = canvas.getContext('2d');
+const M = { l: 76, r: 112, t: 10, b: 24 };
+function panes(H, actsLane) {
+  const on = ['volume', 'dos', 'spread'].filter(k => state.layers[k]);
+  const sub = 66, gap = 16, lane = actsLane ? 20 : 0, main = H - M.t - M.b - lane - on.length * (sub + gap);
+  const out = { main: { y: M.t, h: main } }; let y = M.t + main;
+  if (actsLane) { out.acts = { y: y + 2, h: lane - 4 }; y += lane; }
+  y += gap;
+  for (const k of on) { out[k] = { y, h: sub }; y += sub + gap; }
+  return out;
+}
+
+let V = null, W = 0, H = 0, PL = null;
+function draw() {
+  V = computeView();
+  const p = P();
+  const dpr = window.devicePixelRatio || 1;
+  W = canvas.clientWidth; H = Math.max(540, Math.round(W * 0.58));
+  canvas.width = W * dpr; canvas.height = H * dpr; canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  ctx.font = '11px system-ui, -apple-system, "Segoe UI", sans-serif';
+  PL = panes(H, state.layers.acts && V.series.some(s => s.acts.length));
+  const x0 = M.l, x1 = W - M.r, xw = x1 - x0;
+  const X = t => x0 + (t - V.t0) / (V.t1 - V.t0) * xw;
+  const [ylo, yhi] = V.yd;
+  const Y = v => {
+    const pane = PL.main;
+    if (state.y === 'log') return pane.y + pane.h - (Math.log(v) - Math.log(ylo)) / (Math.log(yhi) - Math.log(ylo)) * pane.h;
+    return pane.y + pane.h - (v - ylo) / (yhi - ylo) * pane.h;
+  };
+  V.X = X; V.Y = Y; V.x0 = x0; V.x1 = x1;
+
+  // ----- main pane chrome -----
+  const mp = PL.main;
+  ctx.fillStyle = p.surface; ctx.fillRect(0, 0, W, H);
+  // estimation window highlight (what the estimate at the right edge was priced from)
+  if (state.layers.window) {
+    const w0 = V.t1 - V.wares[0].params.window * DAY;
+    if (w0 > V.t0) {
+      ctx.fillStyle = rgba(p.ink, 0.035); ctx.fillRect(X(w0), mp.y, x1 - X(w0), mp.h);
+      ctx.strokeStyle = rgba(p.ink, 0.15); ctx.setLineDash([3, 3]); ctx.beginPath(); ctx.moveTo(X(w0), mp.y); ctx.lineTo(X(w0), mp.y + mp.h); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = p.ink3; ctx.textAlign = 'left'; ctx.fillText(`Estimate window · ${V.wares[0].params.window}d`, X(w0) + 5, mp.y + 12);
+    }
+  }
+  // y grid + ticks (a tick label yields to a value tag that would sit on top of it)
+  const yticks = niceTicks(ylo, yhi, state.y === 'log' ? 'log' : 'lin', 6);
+  const tagYs = state.layers.ladder ? V.series.flatMap(s => [s.w.estimateNow.point, s.w.listings.length ? s.w.listings[0].p : null]).filter(v => v && v >= ylo && v <= yhi).map(v => Y(v)) : [];
+  ctx.strokeStyle = p.grid; ctx.lineWidth = 1; ctx.fillStyle = p.ink3; ctx.textAlign = 'right';
+  for (const v of yticks) { const y = Math.round(Y(v)) + .5; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); if (!tagYs.some(ty => Math.abs(ty - y) < 11)) ctx.fillText(fmtGil(v), x0 - 8, y + 4); }
+  // x ticks (shared)
+  const xt = timeTicks(V.t0, V.t1);
+  ctx.textAlign = 'center';
+  for (const t of xt) { const x = Math.round(X(t)) + .5; ctx.strokeStyle = p.grid; ctx.beginPath(); ctx.moveTo(x, mp.y); ctx.lineTo(x, H - M.b); ctx.stroke(); ctx.fillStyle = p.ink3; ctx.fillText(fmtDate(t), x, H - M.b + 14); }
+  // sample truncation marker
+  for (const s of V.series) if (s.w.truncated && s.w.sales.length && s.w.sales[0].t >= V.t0) {
+    const x = X(s.w.sales[0].t); ctx.strokeStyle = rgba(p.ink, .35); ctx.setLineDash([2, 3]); ctx.beginPath(); ctx.moveTo(x, mp.y); ctx.lineTo(x, mp.y + mp.h); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = p.ink3; ctx.textAlign = 'left'; ctx.fillText('History begins here — Sample cap', x + 4, mp.y + mp.h - 6);
+  }
+  // Freshness on the time axis: nothing has been observed since the last upload
+  {
+    const lastUp = Math.min(...V.series.map(s => s.w.lastUpload));
+    const gap = V.t1 - lastUp;
+    if (gap > Math.max(HOUR, (V.t1 - V.t0) * 0.004)) {
+      const xa = Math.max(x0, X(lastUp));
+      ctx.save(); ctx.beginPath(); ctx.rect(xa, mp.y, x1 - xa, H - M.b - mp.y); ctx.clip();
+      ctx.strokeStyle = rgba(p.ink, .09); ctx.lineWidth = 1;
+      const top = mp.y, bot = H - M.b, hh = bot - top;
+      for (let xx = xa - hh; xx < x1; xx += 7) { ctx.beginPath(); ctx.moveTo(xx, bot); ctx.lineTo(xx + hh, top); ctx.stroke(); }
+      ctx.restore();
+      ctx.strokeStyle = rgba(p.ink, .25); ctx.beginPath(); ctx.moveTo(Math.round(xa) + .5, mp.y); ctx.lineTo(Math.round(xa) + .5, H - M.b); ctx.stroke();
+      const lbl = `no upload for ${ago(gap)}`; ctx.fillStyle = gap > DAY ? p.warning : p.ink3; ctx.textAlign = 'right';
+      ctx.fillText(lbl, x1 - 4, H - M.b - 6);
+    }
+  }
+  if (PL.acts) { ctx.fillStyle = p.ink3; ctx.textAlign = 'right'; ctx.fillText('acts', x0 - 6, PL.acts.y + PL.acts.h / 2 + 4); }
+  ctx.save(); ctx.beginPath(); ctx.rect(x0, mp.y - 2, xw, mp.h + 4 + (PL.acts ? 20 : 0)); ctx.clip();
+
+  // ----- layers per series -----
+  for (const s of V.series) {
+    const col = s.w.hq ? p.hq : p.nq;
+    // book: listings still on the board, traced back to when they were put up
+    if (state.layers.book) {
+      for (const l of s.book) {
+        if (l.p < ylo || l.p > yhi) continue;
+        const age = (V.t1 - l.rt) / DAY;
+        const a = l.own ? .9 : Math.max(.18, .6 - age / 90 * .4);
+        ctx.strokeStyle = l.own ? rgba(p.you, a) : rgba(col, a); ctx.lineWidth = l.own ? 2 : 1;
+        const y = Math.round(Y(l.p)) + .5;
+        ctx.beginPath(); ctx.moveTo(X(l.from), y); ctx.lineTo(x1, y); ctx.stroke();
+        if (l.rt >= V.t0) { ctx.beginPath(); ctx.moveTo(X(l.rt) + .5, y - 3); ctx.lineTo(X(l.rt) + .5, y + 3); ctx.stroke(); } // put up here
+        if (l.own) { ctx.fillStyle = p.you; ctx.textAlign = 'right'; ctx.fillText('your Listing', x1 - 4, y - 3); }
+      }
+    }
+    // dispersion band, broken where the Sample cannot support it
+    if (state.layers.band) {
+      const segs = []; let cur = [];
+      for (const b of s.band) { if (b.ok) cur.push(b); else if (cur.length) { segs.push(cur); cur = []; } }
+      if (cur.length) segs.push(cur);
+      for (const seg of segs) {
+        for (const [lo, hi, alpha] of [['p10', 'p90', .10], ['p25', 'p75', .16]]) {
+          ctx.beginPath();
+          seg.forEach((b, i) => { const x = X(b.mid), y = Y(b[hi]); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+          for (let i = seg.length - 1; i >= 0; i--) ctx.lineTo(X(seg[i].mid), Y(seg[i][lo]));
+          ctx.closePath();
+          // fade by evidence: alpha scales with n_eff up to 25
+          const ne = seg.reduce((m, b) => m + b.ne, 0) / seg.length;
+          ctx.fillStyle = rgba(col, alpha * Math.min(1, .45 + ne / 25 * .55)); ctx.fill();
+        }
+        if (seg.length === 1) { const b = seg[0]; ctx.strokeStyle = rgba(col, .35); ctx.beginPath(); ctx.moveTo(X(b.mid), Y(b.p25)); ctx.lineTo(X(b.mid), Y(b.p75)); ctx.stroke(); }
+      }
+    }
+    // candles (optional): hollow up, filled down; a bucket with fewer than 3 Sales is drawn as a tick, never a body
+    if (state.marks !== 'sales') {
+      const half = Math.max(2, Math.min(9, (X(V.start + s.bw) - X(V.start)) * .32));
+      for (const b of s.buckets) {
+        if (!b.n) continue; const x = X(b.mid);
+        ctx.strokeStyle = col; ctx.lineWidth = 1;
+        if (b.n < 3) { ctx.beginPath(); ctx.moveTo(x - half, Y(b.p50)); ctx.lineTo(x + half, Y(b.p50)); ctx.stroke(); continue; }
+        ctx.beginPath(); ctx.moveTo(x, Y(b.h)); ctx.lineTo(x, Y(b.l)); ctx.stroke();
+        const yo = Y(b.o), yc = Y(b.c), top = Math.min(yo, yc), hgt = Math.max(1, Math.abs(yc - yo));
+        if (b.c >= b.o) { ctx.fillStyle = p.surface; ctx.fillRect(x - half, top, half * 2, hgt); ctx.strokeRect(x - half + .5, top + .5, half * 2 - 1, hgt - 1); }
+        else { ctx.fillStyle = col; ctx.fillRect(x - half, top, half * 2, hgt); }
+      }
+    }
+    // sales dots: every Sale, sized by Stack, never a smoothed line first
+    if (state.layers.sales && state.marks !== 'candles') {
+      const maxQ = Math.max(1, ...s.vis.map(x => x.q));
+      const dense = s.vis.length > 1200;
+      for (const x of s.vis) {
+        const r = 2.2 + Math.sqrt(x.q / maxQ) * (dense ? 3.2 : 4.5);
+        let y = Y(x.p), pinned = 0;
+        if (x.p > yhi) { y = mp.y + 6; pinned = 1; } else if (x.p < ylo) { y = mp.y + mp.h - 6; pinned = -1; }
+        const px = X(x.t);
+        if (pinned) { ctx.strokeStyle = rgba(col, .9); ctx.lineWidth = 1.2; triStroke(px, y, 4, pinned > 0); continue; }
+        ctx.beginPath(); ctx.arc(px, y, r, 0, Math.PI * 2);
+        ctx.fillStyle = rgba(col, dense ? .35 : .5); ctx.fill();
+        ctx.lineWidth = 1; ctx.strokeStyle = rgba(p.surface, .9); ctx.stroke();
+      }
+    }
+    // estimate: the pricing engine's number, day by day - broken where no sales rung applies
+    if (state.layers.est) {
+      const pts = s.est;
+      if (state.layers.ribbon) {
+        const segs = []; let cur = [];
+        for (const e of pts) { if (e.p != null) cur.push(e); else if (cur.length) { segs.push(cur); cur = []; } }
+        if (cur.length) segs.push(cur);
+        for (const seg of segs) {
+          // an interval, not a cloud: a faint fill and two dotted edges in the series colour
+          ctx.beginPath(); seg.forEach((e, i) => { i ? ctx.lineTo(X(e.t), Y(e.hi)) : ctx.moveTo(X(e.t), Y(e.hi)); });
+          for (let i = seg.length - 1; i >= 0; i--) ctx.lineTo(X(seg[i].t), Y(seg[i].lo));
+          ctx.closePath(); ctx.fillStyle = rgba(col, .07); ctx.fill();
+          ctx.strokeStyle = rgba(col, .7); ctx.lineWidth = 1; ctx.setLineDash([1.5, 3]);
+          for (const k of ['lo', 'hi']) { ctx.beginPath(); seg.forEach((e, i) => { i ? ctx.lineTo(X(e.t), Y(e[k])) : ctx.moveTo(X(e.t), Y(e[k])); }); ctx.stroke(); }
+          ctx.setLineDash([]);
+        }
+      }
+      ctx.lineWidth = 2; ctx.lineJoin = 'round';
+      let prev = null;
+      for (const e of pts) {
+        if (e.p == null) { prev = null; continue; }
+        if (prev) {
+          ctx.strokeStyle = e.sev === 'ok' ? col : rgba(col, .85);
+          ctx.setLineDash(e.sev === 'ok' ? [] : [4, 4]);
+          ctx.beginPath(); ctx.moveTo(X(prev.t), Y(prev.p)); ctx.lineTo(X(e.t), Y(e.p)); ctx.stroke();
+        }
+        prev = e;
+      }
+      ctx.setLineDash([]);
+      // white halo under the line for legibility over dots
+    }
+    // your acts: Strategy replay (simulated) - the mantra made visible
+    if (state.layers.acts && s.acts.length) {
+      let open = null;
+      // runs of Holds collapse into one span with one glyph and one label - a wall of pause marks says less than a bracket
+      const runs = []; let run = null;
+      for (const a of s.acts) {
+        if (a.kind === 'hold') {
+          const why = /thin/.test(a.reason || '') ? 'thin Sample' : 'below Floor';
+          if (run && run.why === why && run.price === a.price) { run.to = a.review || a.t; run.n++; }
+          else { run = { from: a.t, to: a.review || a.t, why, price: a.price, n: 1 }; runs.push(run); }
+        } else run = null;
+      }
+      for (const a of s.acts) {
+        const x = X(a.t);
+        if (a.kind === 'list' || a.kind === 'reprice') {
+          if (open) { shelf(open.x, x, Y(open.p)); }
+          open = { x, p: a.price };
+          ctx.fillStyle = p.you; tri(x, Y(a.price) - (a.kind === 'list' ? 8 : -8), 5, a.kind === 'list');
+          if (a.kind === 'reprice' && a.prev) { ctx.strokeStyle = rgba(p.you, .6); ctx.setLineDash([2, 2]); ctx.beginPath(); ctx.moveTo(x, Y(a.prev)); ctx.lineTo(x, Y(a.price)); ctx.stroke(); ctx.setLineDash([]); }
+        } else if (a.kind === 'sold') {
+          if (open) { shelf(open.x, x, Y(open.p)); open = null; }
+          star(x, Y(a.price), 6, p.you);
+        }
+      }
+      if (open) shelf(open.x, x1, Y(open.p), true);
+      for (const r of runs) {
+        const xa = X(r.from), xb = Math.min(x1, X(r.to)), y = r.price ? Y(r.price) : PL.acts.y + PL.acts.h / 2;
+        ctx.fillStyle = rgba(p.you, .9); ctx.fillRect(xa - 3, y - 5, 2, 10); ctx.fillRect(xa + 1, y - 5, 2, 10);
+        if (xb - xa > 6) { ctx.strokeStyle = rgba(p.you, .55); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(xa + 5, y + .5); ctx.lineTo(xb, y + .5); ctx.stroke(); }
+        const lbl = `Hold · ${r.why}${r.n > 1 ? ' · ' + Math.round((r.to - r.from) / DAY) + ' d' : ''}`;
+        const tw = ctx.measureText(lbl).width;
+        if (xb - xa > tw + 18) {
+          ctx.fillStyle = p.surface; ctx.fillRect(xa + 8, y - 7, tw + 6, 14);
+          ctx.fillStyle = rgba(p.you, .95); ctx.textAlign = 'left'; ctx.fillText(lbl, xa + 11, y + 4);
+        }
+      }
+    }
+    function shelf(xa, xb, y, openEnded) { ctx.strokeStyle = rgba(p.you, .8); ctx.lineWidth = 2; ctx.setLineDash(openEnded ? [3, 3] : []); ctx.beginPath(); ctx.moveTo(xa, y); ctx.lineTo(xb, y); ctx.stroke(); ctx.setLineDash([]); ctx.lineWidth = 1; }
+  }
+  ctx.restore();
+
+  // ----- book ladder in the right margin: the Snapshot -----
+  if (state.layers.ladder) {
+    const lx = x1 + 8, lw = M.r - 16;
+    ctx.fillStyle = p.ink3; ctx.textAlign = 'left'; ctx.fillText('On the board', lx, mp.y + 12);
+    for (const s of V.series) {
+      const col = s.w.hq ? p.hq : p.nq;
+      const maxq = Math.max(1, ...s.w.listings.map(l => l.q));
+      let above = 0, below = 0;
+      for (const l of s.w.listings) {
+        if (l.p > yhi) { above += l.q; continue; } if (l.p < ylo) { below += l.q; continue; }
+        const y = Math.round(Y(l.p)) + .5, len = 6 + Math.sqrt(l.q / maxq) * (lw - 10);
+        ctx.strokeStyle = l.own ? p.you : rgba(col, .75); ctx.lineWidth = l.own ? 3 : 2;
+        ctx.beginPath(); ctx.moveTo(lx, y); ctx.lineTo(lx + len, y); ctx.stroke();
+      }
+      ctx.lineWidth = 1; ctx.fillStyle = p.ink3; ctx.textAlign = 'left';
+      if (above) ctx.fillText(`▲ ${above} unit${above > 1 ? 's' : ''} above`, lx, mp.y + 26);
+      if (below) ctx.fillText(`▼ ${below} below`, lx, mp.y + mp.h - 34);
+      // value tags on the pane edge: the Estimate (series colour) and the Min Listing (muted)
+      const eNow = s.w.estimateNow;
+      if (eNow.point && eNow.point >= ylo && eNow.point <= yhi) tag(x1, Y(eNow.point), fmtGil(eNow.point), col, eNow.severity === 'ok');
+      const min = s.w.listings.length ? s.w.listings[0].p : null;
+      if (min != null && min >= ylo && min <= yhi && Math.abs(Y(min) - (eNow.point ? Y(eNow.point) : -99)) > 14) tag(x1, Y(min), 'min ' + fmtGil(min), p.ink3, true);
+      // time-to-clear, in the ladder column: the units listed below the Estimate, at the window's sold-per-day
+      if (eNow.point && V.series.length === 1) {
+        const below = s.w.listings.filter(l => l.p < eNow.point).reduce((u, l) => u + l.q, 0);
+        const win = s.w.params.window, sold = s.w.sales.filter(x => x.t > V.t1 - win * DAY).reduce((u, x) => u + x.q, 0), vel = sold / win;
+        const yy = mp.y + mp.h - 18; ctx.textAlign = 'left';
+        if (below === 0) { ctx.fillStyle = p.ink3; ctx.fillText('nothing below', lx, yy); ctx.fillText('the Estimate', lx, yy + 12); }
+        else { ctx.fillStyle = p.ink2; ctx.fillText(`${below} below Est.`, lx, yy); ctx.fillText(vel > 0 ? `≈ ${(below / vel).toFixed(below / vel < 10 ? 1 : 0)} d to clear` : 'no Sales to clear', lx, yy + 12); }
+      }
+    }
+  }
+  function tag(_x, y, text, colr, solid) {
+    // on the value axis (left), the way a trading chart pins the last price to its axis
+    ctx.font = 'bold 11px system-ui, -apple-system, "Segoe UI", sans-serif';
+    const w = ctx.measureText(text).width + 10, h = 16, x = x0 - 4 - w;
+    ctx.fillStyle = solid ? colr : rgba(colr, .75);
+    rrect(x, y - h / 2, w, h, 3); ctx.fill();
+    ctx.fillStyle = p.surface; ctx.textAlign = 'left'; ctx.fillText(text, x + 5, y + 4);
+    ctx.font = '11px system-ui, -apple-system, "Segoe UI", sans-serif';
+  }
+
+  // ----- sub panes -----
+  drawSub('volume', 'Units sold per bucket', (s, pane, col, i, n) => {
+    const maxU = Math.max(1, ...V.series.flatMap(x => x.buckets.map(b => b.units)));
+    const bwpx = X(V.start + s.bw) - X(V.start), barw = Math.max(1, (bwpx - 2) / n);
+    for (const b of s.buckets) {
+      if (!b.units) continue;
+      const h = b.units / maxU * (pane.h - 4), x = X(b.a) + 1 + i * barw;
+      ctx.fillStyle = rgba(col, .7); rrect(x, pane.y + pane.h - h, barw - (n > 1 ? 1 : 0), h, 2); ctx.fill();
+    }
+    return [0, maxU];
+  }, v => Math.round(v).toLocaleString());
+  drawSub('dos', 'Days of Supply — lower bound: only Listings still on the board can be traced back (EMM’s own Snapshots make this real from install day)', (s, pane, col) => {
+    const vals = s.dos.filter(d => isFinite(d.dos)).map(d => d.dos);
+    const mx = Math.max(1, ...V.series.flatMap(x => x.dos.filter(d => isFinite(d.dos)).map(d => d.dos)));
+    const cap = Math.min(mx, Math.max(7, quantile(vals.slice().sort((a, b) => a - b), .95) * 1.3 || 7));
+    let prev = null;
+    for (const d of s.dos) {
+      const x = X(d.tau); const v = Math.min(d.dos, cap); const y = pane.y + pane.h - v / cap * (pane.h - 4);
+      ctx.strokeStyle = rgba(col, .35 + d.conf * .65); ctx.lineWidth = 2;
+      if (prev && isFinite(d.dos) && isFinite(prev.v)) { ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(x, y); ctx.stroke(); }
+      if (!isFinite(d.dos) && d.depth > 0) { ctx.fillStyle = rgba(col, .6); tri(x, pane.y + 6, 3, true); }
+      prev = { x, y, v: d.dos };
+      if (d.isNow && isFinite(d.dos)) { ctx.fillStyle = col; ctx.beginPath(); ctx.arc(x, y, 3.5, 0, 7); ctx.fill(); ctx.textAlign = 'left'; ctx.fillText(d.dos.toFixed(1) + 'd', x + 6, y + 4); }
+    }
+    return [0, cap];
+  }, v => v.toFixed(0) + 'd');
+  drawSub('spread', 'Spread — middle 50% of Sales as a share of the median', (s, pane, col) => {
+    const vals = V.series.flatMap(x => x.band.filter(b => b.ok).map(b => (b.p75 - b.p25) / b.p50));
+    const cap = Math.max(.1, Math.min(2, (quantile(vals.slice().sort((a, b) => a - b), .98) || .1) * 1.15));
+    let prev = null;
+    for (const b of s.band) {
+      if (!b.ok) { prev = null; continue; }
+      const v = Math.min(cap, (b.p75 - b.p25) / b.p50), x = X(b.mid), y = pane.y + pane.h - v / cap * (pane.h - 4);
+      ctx.strokeStyle = rgba(col, Math.min(1, .45 + b.ne / 25 * .55)); ctx.lineWidth = 2;
+      if (prev) { ctx.beginPath(); ctx.moveTo(prev.x, prev.y); ctx.lineTo(x, y); ctx.stroke(); }
+      prev = { x, y };
+    }
+    return [0, cap];
+  }, v => Math.round(v * 100) + '%');
+
+  function drawSub(key, title, fn, fmt) {
+    const pane = PL[key]; if (!pane) return;
+    ctx.fillStyle = p.ink3; ctx.textAlign = 'left'; ctx.fillText(title, x0 + 4, pane.y - 4);
+    ctx.strokeStyle = p.axis; ctx.beginPath(); ctx.moveTo(x0, pane.y + pane.h + .5); ctx.lineTo(x1, pane.y + pane.h + .5); ctx.stroke();
+    ctx.save(); ctx.beginPath(); ctx.rect(x0, pane.y - 8, xw, pane.h + 10); ctx.clip();
+    let dom = null;
+    V.series.forEach((s, i) => { dom = fn(s, pane, s.w.hq ? p.hq : p.nq, i, V.series.length); });
+    ctx.restore();
+    if (dom) { ctx.fillStyle = p.ink3; ctx.textAlign = 'right'; ctx.fillText(fmt(dom[1]), x0 - 8, pane.y + 8); ctx.fillText(fmt(dom[0]), x0 - 8, pane.y + pane.h + 3); }
+  }
+
+  // ----- crosshair -----
+  if (state.hover) drawHover(p, X, Y);
+  function tri(x, y, r, up) { ctx.beginPath(); if (up) { ctx.moveTo(x, y - r); ctx.lineTo(x + r, y + r); ctx.lineTo(x - r, y + r); } else { ctx.moveTo(x, y + r); ctx.lineTo(x + r, y - r); ctx.lineTo(x - r, y - r); } ctx.closePath(); ctx.fill(); }
+  function triStroke(x, y, r, up) { ctx.beginPath(); if (up) { ctx.moveTo(x, y - r); ctx.lineTo(x + r, y + r); ctx.lineTo(x - r, y + r); } else { ctx.moveTo(x, y + r); ctx.lineTo(x + r, y - r); ctx.lineTo(x - r, y - r); } ctx.closePath(); ctx.stroke(); }
+  function star(x, y, r, colr) { ctx.fillStyle = colr; ctx.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * .45 : r; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } ctx.closePath(); ctx.fill(); ctx.strokeStyle = p.surface; ctx.lineWidth = 1; ctx.stroke(); }
+  function rrect(x, y, w, h, r) { r = Math.min(r, w / 2, h / 2); ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r); ctx.lineTo(x + w, y + h); ctx.closePath(); }
+}
+
+function drawHover(p, X, Y) {
+  const { t, dot } = state.hover;
+  const x = Math.round(X(t)) + .5;
+  ctx.strokeStyle = rgba(p.ink, .45); ctx.setLineDash([]); ctx.beginPath(); ctx.moveTo(x, PL.main.y); ctx.lineTo(x, H - M.b); ctx.stroke();
+  if (dot) { const col = dot.hq ? p.hq : p.nq; ctx.beginPath(); ctx.arc(X(dot.s.t), Y(dot.s.p), dot.r + 3, 0, 7); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.stroke(); ctx.lineWidth = 1; }
+}
+
+function niceTicks(lo, hi, mode, n) {
+  if (mode === 'log') {
+    const out = []; const a = Math.floor(Math.log10(lo)), b = Math.ceil(Math.log10(hi));
+    for (let e = a; e <= b; e++) for (const m of [1, 2, 5]) { const v = m * Math.pow(10, e); if (v >= lo && v <= hi) out.push(v); }
+    if (out.length > 9) return out.filter((_, i) => i % 3 === 0);
+    return out;
+  }
+  const span = hi - lo, raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map(m => m * mag).find(s => span / s <= n + 1) || mag * 10;
+  const out = []; for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) out.push(v); return out;
+}
+function timeTicks(t0, t1) {
+  const days = (t1 - t0) / DAY, stepD = days <= 8 ? 1 : days <= 16 ? 2 : days <= 35 ? 5 : days <= 70 ? 10 : days <= 100 ? 15 : 30;
+  const out = []; let t = Math.ceil(t0 / DAY) * DAY; while (t <= t1) { out.push(t); t += stepD * DAY; } return out;
+}
+
+// ---------- hover / tooltip ----------
+const tip = $('#tip');
+function nearest(evtX, evtY) {
+  if (!V) return null;
+  const rect = canvas.getBoundingClientRect(), x = evtX - rect.left, y = evtY - rect.top;
+  if (x < V.x0 || x > V.x1) return null;
+  const t = V.t0 + (x - V.x0) / (V.x1 - V.x0) * (V.t1 - V.t0);
+  // nearest dot within 14px (only in main pane)
+  let dot = null, best = 14 * 14;
+  if (state.layers.sales && state.marks !== 'candles' && y >= PL.main.y && y <= PL.main.y + PL.main.h) {
+    for (const s of V.series) for (const sale of s.vis) {
+      const dx = V.X(sale.t) - x, dy = V.Y(sale.p) - y, d2 = dx * dx + dy * dy;
+      if (d2 < best) { best = d2; dot = { s: sale, hq: s.w.hq, r: 3 }; }
+    }
+  }
+  return { t, x, y, dot };
+}
+function showTip(h) {
+  if (!h) { tip.style.display = 'none'; return; }
+  const bi = Math.min(V.nb - 1, Math.max(0, Math.floor((h.t - V.start) / V.bw)));
+  const rows = [];
+  const bk0 = V.series[0].buckets[bi];
+  rows.push(`<div class="d">${fmtDate(bk0.a)} – ${fmtDate(bk0.b - 1)}${V.bw < DAY ? ' · ' + new Date(bk0.a * 1000).toLocaleTimeString(undefined, { hour: '2-digit' }) : ''}</div>`);
+  if (h.dot) {
+    const s = h.dot.s;
+    rows.push(`<div class="r"><span class="l"><span class="k dot" style="background:${h.dot.hq ? css('--hq') : css('--nq')}"></span>Sale · ${fmtDateTime(s.t)}</span></div>`);
+    rows.push(`<div class="r"><span class="l">Unit Price</span><b>${fmtGilFull(s.p)}</b></div>`);
+    rows.push(`<div class="r"><span class="l">Stack</span><b>${s.q}</b></div>`);
+    rows.push(`<div class="r"><span class="l">Total</span><b>${fmtGilFull(s.p * s.q)}</b></div><hr>`);
+  }
+  for (const s of V.series) {
+    const col = s.w.hq ? css('--hq') : css('--nq'); const bk = s.buckets[bi];
+    rows.push(`<div class="r"><span class="l"><span class="k" style="background:${col}"></span>${s.w.hq ? 'HQ' : 'NQ'} · ${bk.n} Sale${bk.n === 1 ? '' : 's'}, ${bk.units} unit${bk.units === 1 ? '' : 's'}</span></div>`);
+    if (bk.n) rows.push(`<div class="r"><span class="l">low · median · high</span><b>${fmtGil(bk.l)} · ${fmtGil(bk.p50)} · ${fmtGil(bk.h)}</b></div>`);
+    const e = s.est.reduce((b, e) => (Math.abs(e.t - h.t) < Math.abs((b ? b.t : 0) - h.t) || !b) ? e : b, null);
+    if (e && e.p != null) rows.push(`<div class="r"><span class="l">Estimate${e.sev !== 'ok' ? ' <i>(provisional)</i>' : ''}</span><b>${fmtGil(e.p)} <span style="color:var(--ink-3);font-weight:400">${fmtGil(e.lo)}–${fmtGil(e.hi)} · n<sub>eff</sub> ${e.n.toFixed(0)}</span></b></div>`);
+    else if (e) rows.push(`<div class="r"><span class="l">Estimate</span><b style="color:var(--ink-3);font-weight:400">none — too few Sales</b></div>`);
+    const b = s.band[bi];
+    if (b && b.ok) rows.push(`<div class="r"><span class="l">Middle 50% of Sales</span><b>${fmtGil(b.p25)}–${fmtGil(b.p75)}</b></div>`);
+    const d = s.dos[bi];
+    if (d && state.layers.dos) rows.push(`<div class="r"><span class="l">Days of Supply${d.isNow ? '' : ' (lower bound)'}</span><b>${isFinite(d.dos) ? d.dos.toFixed(1) + 'd' : d.depth ? '∞' : '—'}</b></div>`);
+    const acts = s.acts.filter(a => a.t >= bk.a && a.t < bk.b);
+    for (const a of acts) rows.push(`<div class="r ev"><span class="l">${{ list: '▲ List', reprice: '▼ Reprice', sold: '★ Sold', hold: '‖ Hold' }[a.kind]}${a.price ? ' at ' + fmtGilFull(a.price) : ''}</span></div>${a.reason ? `<div style="color:var(--ink-3);font-size:11px;max-width:260px">${a.reason}</div>` : ''}`);
+  }
+  tip.innerHTML = rows.join('');
+  tip.style.display = 'block';
+  const cr = canvas.getBoundingClientRect(), pr = canvas.parentElement.getBoundingClientRect();
+  let left = h.x + (cr.left - pr.left) + 16, top = h.y + (cr.top - pr.top) + 12;
+  if (left + tip.offsetWidth > pr.width - 8) left = h.x + (cr.left - pr.left) - tip.offsetWidth - 12;
+  if (top + tip.offsetHeight > pr.height - 4) top = pr.height - tip.offsetHeight - 4;
+  tip.style.left = left + 'px'; tip.style.top = top + 'px';
+}
+canvas.addEventListener('mousemove', e => { state.hover = nearest(e.clientX, e.clientY); draw(); showTip(state.hover); });
+canvas.addEventListener('mouseleave', () => { state.hover = null; draw(); showTip(null); });
+document.addEventListener('keydown', e => {
+  if (!V || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+  const cur = state.hover ? Math.floor((state.hover.t - V.start) / V.bw) : V.nb - 1;
+  const bi = Math.max(0, Math.min(V.nb - 1, cur + (e.key === 'ArrowRight' ? 1 : -1)));
+  const t = V.start + (bi + .5) * V.bw; const x = V.X(t);
+  state.hover = { t, x, y: PL.main.y + 40, dot: null }; draw(); showTip(state.hover); e.preventDefault();
+});
+
+// ---------- side panel ----------
+function sideHtml() {
+  const wares = selection();
+  const blocks = wares.map(w => {
+    const e = w.estimateNow, sev = e.severity;
+    const fromSales = /history/.test(e.basis);
+    const win = w.params.window;
+    const inWin = w.sales.filter(s => s.t > AS_OF - win * DAY);
+    const s7 = w.sales.filter(s => s.t > AS_OF - 7 * DAY), s30 = w.sales.filter(s => s.t > AS_OF - 30 * DAY), s90 = w.sales.filter(s => s.t > AS_OF - 90 * DAY);
+    const med = rows => rows.length ? quantile(rows.map(r => r.p).sort((a, b) => a - b), .5) : null;
+    const units = rows => rows.reduce((s, r) => s + r.q, 0);
+    const depth = w.listings.reduce((s, l) => s + l.q, 0);
+    const vel = units(inWin) / win;
+    const dos = vel > 0 ? depth / vel : null;
+    const below = w.listings.filter(l => l.p < e.point);
+    const fresh = AS_OF - w.lastUpload;
+    const freshTag = fresh > 3 * DAY ? 'warning' : fresh > DAY ? 'caution' : 'ok';
+    const sevLabel = { ok: 'confident', caution: 'provisional', warning: 'provisional', severe: 'provisional' }[sev];
+    const medQ = w.sales.length ? quantile(w.sales.map(s => s.q).sort((a, b) => a - b), .5) : null;
+    const col = w.hq ? 'var(--hq)' : 'var(--nq)';
+    const hqTag = w.canBeHq ? `<span class="tag" style="border-color:${col};color:${col}">${w.hq ? 'HQ' : 'NQ'}</span>` : '';
+    return `
+    <div class="card">
+      <h2>Estimate ${hqTag}</h2>
+      <div class="hero">${e.point ? fmtGilFull(e.point) : '—'}<small>gil / unit</small></div>
+      <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+        <span class="tag ${sev}"><i></i>${sevLabel} · ${e.basis}</span>
+        ${fromSales && e.lo != null ? `<span class="tag">80% interval ${fmtGil(e.lo)}–${fmtGil(e.hi)}</span>` : ''}
+        ${fromSales ? `<span class="tag">n<sub>eff</sub> ${e.nEff.toFixed(1)}</span>` : ''}
+      </div>
+      ${sev !== 'ok' ? `<div class="box ${sev}"><b>${sev === 'severe' ? 'Not a market price.' : sev === 'warning' ? 'Not priced from Sales.' : 'Priced from a wider window.'}</b> ${e.reason}</div>` : ''}
+      ${fromSales ? `<div class="foot" style="margin-top:6px">The 80% interval says how well the median is pinned down by the Sales EMM has — it is not a forecast of where the next Sale lands.</div>` : ''}
+      <table class="kv">
+        <tr><td>Sample <span class="muted">${win}d</span></td><td>${inWin.length} Sale${inWin.length === 1 ? '' : 's'} · ${units(inWin).toLocaleString()} units</td></tr>
+        <tr><td>Freshness</td><td><span class="tag ${freshTag}"><i></i>uploaded ${ago(fresh)} ago</span></td></tr>
+        <tr><td>Median <span class="muted">7d · 30d · 90d</span></td><td>${fmtGil(med(s7))} · ${fmtGil(med(s30))} · ${fmtGil(med(s90))}</td></tr>
+        <tr><td>Sold per day</td><td>${vel.toFixed(vel < 10 ? 2 : 0)} units <span class="muted">${(inWin.length / win).toFixed(2)} Sales</span></td></tr>
+        <tr><td>On the board</td><td>${w.listings.length} Listing${w.listings.length === 1 ? '' : 's'} · ${depth.toLocaleString()} units</td></tr>
+        <tr><td>Min Listing <span class="muted">World</span></td><td>${w.listings.length ? fmtGilFull(w.listings[0].p) : '—'}${w.listings.length && w.listings[0].own ? ' <span class="tag" style="color:var(--you);border-color:var(--you)">yours</span>' : ''}</td></tr>
+        <tr><td>Listed below Estimate</td><td>${below.length} · ${below.reduce((s, l) => s + l.q, 0)} units</td></tr>
+        <tr><td><b style="color:var(--ink)">Days of Supply</b></td><td><b>${dos == null ? (depth ? '∞' : '—') : dos.toFixed(1) + ' d'}</b></td></tr>
+        <tr><td>DC average Sale <span class="muted">${D.dc} · travel needed</span></td><td>${w.agg.dc.avgSale ? fmtGilFull(w.agg.dc.avgSale) : '—'}</td></tr>
+        ${(w.vendorBuy && w.vendorBuy < 99999) || w.vendorSell ? `<tr><td>Vendor <span class="muted">buy · sell</span></td><td>${w.vendorBuy && w.vendorBuy < 99999 ? fmtGilFull(w.vendorBuy) : '—'} · ${w.vendorSell ? fmtGilFull(w.vendorSell) : '—'}</td></tr>` : ''}
+        <tr><td>Stack <span class="muted">max · typical Sale</span></td><td>${w.stackSize}${medQ ? ` · ${medQ}` : ''}</td></tr>
+        <tr><td>${w.type} <span class="muted">window · horizon</span></td><td>${w.params.window}d · ${w.params.horizon}d</td></tr>
+      </table>
+    </div>`;
+  });
+  return blocks.join('');
+}
+
+// ---------- chips, legend, controls ----------
+const LAYERS = [
+  ['sales', 'Sales', 'dot', 'nq'], ['band', 'Where Sales landed', 'sw', 'nq'], ['est', 'Estimate', 'line', 'nq'], ['ribbon', 'Precision ribbon', 'sw', 'ink3'],
+  ['book', 'Listings on the board', 'line', 'ink3'], ['ladder', 'Board ladder', 'sw', 'ink3'], ['acts', 'Your acts (stand-in: simulated replay — dropped from the product)', 'sw', 'you'], ['window', 'Estimate window', 'sw', 'ink3'],
+  ['volume', 'Volume pane', 'sw', 'ink3'], ['dos', 'Days of Supply pane', 'sw', 'ink3'], ['spread', 'Spread pane', 'sw', 'ink3'],
+];
+function renderChips() {
+  const el = $('#layers'); el.innerHTML = '';
+  for (const [k, label, kind, colr] of LAYERS) {
+    const c = document.createElement('span'); c.className = 'chip' + (state.layers[k] ? ' on' : '');
+    const sw = document.createElement('i'); sw.className = 'sw ' + (kind === 'dot' ? 'dot' : kind === 'line' ? 'line' : '');
+    sw.style.background = `var(--${colr})`; if (kind === 'sw' && (k === 'band' || k === 'ribbon')) sw.style.opacity = .45;
+    c.appendChild(sw); c.appendChild(document.createTextNode(label));
+    c.onclick = () => { state.layers[k] = !state.layers[k]; renderChips(); draw(); };
+    el.appendChild(c);
+  }
+}
+function renderLegend() {
+  const it = items.get(state.item);
+  const acts = selection().some(s => s.replay.length);
+  $('#legend').innerHTML = `
+    <span><i class="k" style="width:9px;height:9px;border-radius:50%;background:var(--nq);opacity:.7"></i>one Sale — size is the Stack</span>
+    <span><i class="k" style="width:14px;height:9px;background:var(--nq);opacity:.2"></i>where Sales landed: middle 50% (darker) and 80% — absent where fewer than 5 effective observations</span>
+    <span><i class="k" style="width:14px;height:2px;background:var(--nq)"></i>Estimate — the trailing ${selection()[0].params.window}-day median, day by day; dashed where provisional; dotted edges = 80% precision interval, <b>not a forecast</b></span>
+    <span><i class="k" style="width:14px;height:1px;background:var(--ink-3)"></i>a Listing still on the board, from when it was put up</span>
+    ${acts ? `<span style="color:var(--you)">▲ List ▼ Reprice ★ Sold ‖ Hold — a Strategy <b>replayed</b> over real History (simulated, not your acts)</span>` : ''}
+    ${it.canBeHq ? `<span><i class="k" style="width:9px;height:9px;border-radius:50%;background:var(--hq)"></i>HQ <i class="k" style="width:9px;height:9px;border-radius:50%;background:var(--nq);margin-left:6px"></i>NQ</span>` : ''}`;
+}
+function renderTitle() {
+  const it = items.get(state.item);
+  const q = state.q === 'both' ? 'NQ + HQ' : state.q.toUpperCase();
+  $('#title').textContent = `${it.name}${it.canBeHq ? ' · ' + q : ''}`;
+  $('#subtitle').textContent = `${D.world} (World) · ${it.type} · Unit Price in gil`;
+  $('#scope').textContent = `Scope: ${D.world} (World) · Source: Universalis, cached · as of ${fmtDateTime(AS_OF)}`;
+  document.title = 'EMM Market View';
+}
+function renderTable() {
+  const el = $('#tbl'); if (!state.table || !V) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  const s = V.series[0];
+  const hdr = ['Bucket', 'Sales', 'Units', 'Low', 'Median', 'High', 'Estimate', '80% lo', '80% hi', 'n_eff', 'Mid 50%'];
+  const rows = s.buckets.map((b, i) => {
+    const e = s.est.reduce((best, e) => (Math.abs(e.t - b.mid) < Math.abs((best ? best.t : 0) - b.mid) || !best) ? e : best, null);
+    const bd = s.band[i];
+    return [fmtDate(b.a), b.n, b.units, fmtGilFull(b.l), fmtGilFull(b.p50), fmtGilFull(b.h), e && e.p != null ? fmtGilFull(e.p) : '—', e && e.p != null ? fmtGilFull(e.lo) : '—', e && e.p != null ? fmtGilFull(e.hi) : '—', e ? e.n.toFixed(1) : '—', bd && bd.ok ? `${fmtGilFull(bd.p25)}–${fmtGilFull(bd.p75)}` : '—'];
+  });
+  el.innerHTML = `<table><thead><tr>${hdr.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+function renderFoot() {
+  const w = selection()[0];
+  $('#foot').innerHTML = `${D.note} Every model number here comes from the same estimator the pricing engine prototype uses (<code>models.estimate</code>, block bootstrap, effective sample size), evaluated once per day on the Sales strictly before that day. `
+    + `Historical points may only use own-World Sales — the live book, the Data Centre and the vendor price have no history in the corpus and are used only for the number at the right edge. `
+    + `Listings are traced back to their <code>lastReviewTime</code>: a lower bound on what was on the board, since Listings that have since sold are invisible.${w.truncated ? ' <b>This Ware\'s History is capped by the corpus at 3,000 Sales, so it begins later than 180 days ago — the marker on the chart says where.</b>' : ''}`;
+}
+function renderAll() {
+  renderTitle(); renderChips(); renderLegend(); $('#side').innerHTML = sideHtml(); draw(); renderTable(); renderFoot(); syncControls();
+}
+function syncControls() {
+  const it = items.get(state.item);
+  for (const b of $('#qual').children) { b.classList.toggle('on', b.dataset.q === state.q); b.disabled = !it.canBeHq && b.dataset.q !== 'nq'; }
+  for (const b of $('#win').children) b.classList.toggle('on', String(state.win) === b.dataset.w);
+  for (const b of $('#bucket').children) b.classList.toggle('on', String(state.bucket) === b.dataset.b);
+  for (const b of $('#marks').children) b.classList.toggle('on', state.marks === b.dataset.m);
+  for (const b of $('#yaxis').children) b.classList.toggle('on', state.y === b.dataset.y);
+  $('#clip').classList.toggle('on', state.clip);
+  $('#tablebtn').classList.toggle('on', state.table);
+}
+// ware picker
+{
+  const sel = $('#ware');
+  const order = [...items.values()];
+  for (const it of order) { const o = document.createElement('option'); o.value = it.id; o.textContent = `${it.name} — ${it.type}${it.canBeHq ? ' (NQ/HQ)' : ''}`; sel.appendChild(o); }
+  sel.value = state.item;
+  sel.onchange = () => { state.item = +sel.value; const it = items.get(state.item); if (!it.canBeHq) state.q = 'nq'; if (state.q === 'hq' && !it.hq) state.q = 'nq'; defaultWindow(); renderAll(); };
+}
+function defaultWindow() {
+  // open on the window the Estimate was priced from: the picture matches the number
+  const w = items.get(state.item); const ware = w[state.q === 'both' ? 'nq' : state.q] || w.nq;
+  const win = ware.params.window; state.win = [7, 14, 30, 60, 90, 180].find(x => x >= win) || 180;
+}
+$('#qual').onclick = e => { const b = e.target.closest('button'); if (!b || b.disabled) return; state.q = b.dataset.q; renderAll(); };
+$('#win').onclick = e => { const b = e.target.closest('button'); if (!b) return; state.win = b.dataset.w === 'all' ? 'all' : +b.dataset.w; renderAll(); };
+$('#bucket').onclick = e => { const b = e.target.closest('button'); if (!b) return; state.bucket = b.dataset.b === 'auto' ? 'auto' : +b.dataset.b; renderAll(); };
+$('#marks').onclick = e => { const b = e.target.closest('button'); if (!b) return; state.marks = b.dataset.m; renderAll(); };
+$('#yaxis').onclick = e => { const b = e.target.closest('button'); if (!b) return; state.y = b.dataset.y; renderAll(); };
+$('#clip').onclick = () => { state.clip = !state.clip; renderAll(); };
+$('#tablebtn').onclick = () => { state.table = !state.table; renderTable(); syncControls(); };
+$('#theme').onclick = () => { const r = document.documentElement; r.dataset.theme = r.dataset.theme === 'light' ? 'dark' : 'light'; draw(); };
+window.addEventListener('resize', () => draw());
+// deep links: #item=36060&q=both&win=30&bucket=24&marks=both&y=log&theme=light&layers=-dos,+candles
+function readHash() {
+  const h = new URLSearchParams(location.hash.replace(/^#/, ''));
+  if (h.get('item') && items.has(+h.get('item'))) state.item = +h.get('item');
+  const it = items.get(state.item);
+  defaultWindow();
+  if (h.get('q') && (h.get('q') === 'nq' || (it.canBeHq && ['hq', 'both'].includes(h.get('q'))))) state.q = h.get('q');
+  if (h.get('win')) state.win = h.get('win') === 'all' ? 'all' : +h.get('win');
+  if (h.get('bucket')) state.bucket = h.get('bucket') === 'auto' ? 'auto' : +h.get('bucket');
+  if (h.get('marks')) state.marks = h.get('marks');
+  if (h.get('y')) state.y = h.get('y');
+  if (h.get('clip')) state.clip = h.get('clip') !== '0';
+  if (h.get('theme')) document.documentElement.dataset.theme = h.get('theme');
+  if (h.get('layers')) for (const tok of h.get('layers').split(',')) { const k = tok.slice(1); if (k in state.layers) state.layers[k] = tok[0] !== '-'; }
+  $('#ware').value = state.item;
+}
+readHash();
+window.addEventListener('hashchange', () => { readHash(); renderAll(); });
+renderAll();
+})();
+</script>
+</body>
+</html>

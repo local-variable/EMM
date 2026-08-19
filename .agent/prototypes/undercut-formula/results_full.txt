@@ -1,0 +1,299 @@
+undercut-formula prototype v3 - FULL CATALOGUE
+cache: data_all  |  2026-08-17T18:50Z
+
+========================================================================================================
+TABLE 1 - the whole marketable catalogue: coverage by ware type (Cactuar, 180d)
+========================================================================================================
+  ware type        wares  any sale   n>=5/30d   n_eff>=5   listed   no data
+  -------------------------------------------------------------------------
+  Materia            238       225        172        170      214        13
+  Material         3,440     2,952      2,116      1,867    2,697       488
+  Consumable       3,404     2,342        935        747    1,800     1,062
+  Gear            14,429    10,995      2,924      2,170    6,019     3,434
+  Furnishing       2,490     2,235      1,015        872    1,824       255
+  Collectible      1,115     1,112        772        692    1,001         3
+  Miscellany         126       107         52         47       84        19
+  -------------------------------------------------------------------------
+  ALL             25,242    19,968      7,986      6,565   13,639     5,274
+
+  share of all Wares clearing n>=5:      31.6%
+  share of all Wares clearing n_eff>=5:  26.0%
+  n_eff is the geometric mean of rows, distinct sale days and distinct
+  buyers, so it is never above the row count and is usually well below it.
+
+========================================================================================================
+TABLE 2 - is the ware-type split real on the full catalogue?
+========================================================================================================
+  metric              eps^2          H     wares   reading
+  --------------------------------------------------------------------
+  sales/day           0.207      3,893    18,752   large
+  units/sale          0.766     14,362    18,752   large
+  IQR/median          0.050        725    14,391   small
+  drift               0.006         63    10,166   negligible
+  burstiness          0.272      3,498    12,833   large
+  days of supply      0.028        316    11,239   small
+  unit price          0.318      5,969    18,752   large
+
+========================================================================================================
+TABLE 3 - does effective-n predict error better than a raw row count?
+         Median unit price estimated on days 60-30 back, checked against days 30-0.
+         A more negative correlation means the measure better anticipates error.
+========================================================================================================
+  Wares with both windows: 8,304
+    Spearman(log raw n,   |error|) = -0.0317
+    Spearman(log n_eff,   |error|) = -0.0551
+    -> n_eff is the better predictor of out-of-sample error
+     n_eff < 5: median |error|  33.3% (1,849 Wares)
+          5-10: median |error|  33.6% (2,456 Wares)
+         10-25: median |error|  32.2% (2,247 Wares)
+           25+: median |error|  26.8% (1,752 Wares)
+
+========================================================================================================
+TABLE 4 - cost of a precision bar, on top of the n_eff >= 5 floor
+========================================================================================================
+  ware type        wares     +/-5%    +/-10%    +/-15%    +/-25%    +/-50%
+  ------------------------------------------------------------------------
+  Materia            238     22.7%     35.7%     47.5%     58.8%     68.1%
+  Material         3,440      8.1%     16.2%     24.3%     34.9%     46.8%
+  Consumable       3,404      4.3%      7.2%      9.4%     12.8%     17.8%
+  Gear            14,429      4.5%      6.7%      8.4%     10.7%     13.3%
+  Furnishing       2,490     10.3%     15.9%     20.2%     25.8%     31.7%
+  Collectible      1,115     19.5%     29.5%     37.8%     46.5%     55.7%
+  Miscellany         126     11.9%     26.2%     30.2%     33.3%     33.3%
+
+  Percentages are of ALL Wares of the type - the real coverage cost.
+
+========================================================================================================
+TABLE 4b - EMM always produces an estimate. What does the weaker one cost?
+           Estimate made as of 30 days ago from data strictly before it,
+           scored against what the following 30 days actually did.
+========================================================================================================
+  basis                 wares    share  confident  median error   p90 error
+  -------------------------------------------------------------------------
+  30-day history        6,455   62.4%       100%        31.3%     140.6%
+  90-day history        3,131   30.3%         0%        39.4%     178.6%
+  180-day history         628    6.1%         0%        50.0%     300.0%
+  live listings            79    0.8%         0%        50.5%    2020.0%
+  data centre              31    0.3%         0%        50.0%     200.0%
+  vendor price             18    0.2%         0%        83.3%     441.9%
+  -------------------------------------------------------------------------
+  CONFIDENT             6,455   62.4%       100%        31.3%
+  PROVISIONAL           3,887   37.6%         0%        41.2%
+
+  A provisional estimate is not refused - it is produced and marked. These
+  are the numbers the warning has to be honest about.
+
+========================================================================================================
+TABLE 5 - stack size against unit price: is there a buyer budget?
+========================================================================================================
+  ware type       wares  rho(price,qty)  median txn value   p90 txn value
+  -----------------------------------------------------------------------
+  Materia           172           +0.02             1,800          32,900
+  Material        2,322           -0.39             4,290          87,000
+  Consumable      1,129           -0.27             6,195         127,296
+  Gear               86           -0.48            29,045          91,575
+  Furnishing         51           -0.15            13,735          90,993
+  Collectible       509           -0.04            18,000         575,000
+
+  rho is across Wares: median unit price against median stack size sold.
+  Strongly negative = buyers hold a transaction budget, so stack shrinks
+  as unit price rises. Near zero = stack is chosen for other reasons.
+
+  which stack sizes clear, and which sit (pooled over the type):
+
+    Materia
+          stack   % sales   % book  clear ratio
+              1    41.4%   38.8%         1.07
+            2-9    40.2%   33.1%         1.21
+          10-19     9.2%   10.5%         0.87
+          20-49     6.0%    6.6%         0.90
+          50-98     2.1%    2.9%         0.72
+             99     1.1%    8.0%         0.14  <- sits
+
+    Material
+          stack   % sales   % book  clear ratio
+              1    31.8%   29.0%         1.10
+            2-9    32.9%   28.5%         1.15
+          10-19     9.8%   10.2%         0.97
+          20-49     8.6%   10.6%         0.81
+          50-98     3.9%    6.2%         0.62
+             99    10.1%   13.5%         0.75
+           999+     2.2%    1.5%         1.48
+
+    Consumable
+          stack   % sales   % book  clear ratio
+              1    15.8%   16.0%         0.99
+            2-9    34.6%   40.9%         0.85
+          10-19    12.5%   11.2%         1.12
+          20-49    13.1%    9.8%         1.34
+          50-98     5.5%    6.5%         0.84
+             99    18.4%   15.6%         1.18
+
+    Gear
+          stack   % sales   % book  clear ratio
+              1     2.2%    1.6%         1.40
+            2-9    12.6%   12.0%         1.05
+          10-19    16.2%    8.0%         2.02
+          20-49    15.2%   13.8%         1.10
+          50-98    13.2%   20.2%         0.65
+             99    40.7%   44.4%         0.91
+
+    Furnishing
+          stack   % sales   % book  clear ratio
+              1    24.6%   33.1%         0.74
+            2-9    28.4%   32.0%         0.89
+          10-19    29.6%   17.6%         1.68
+          20-49    10.8%    7.5%         1.44
+          50-98     2.2%    2.6%         0.84
+             99     4.5%    7.2%         0.62
+
+    Collectible
+          stack   % sales   % book  clear ratio
+              1    97.3%   96.9%         1.00
+            2-9     2.5%    2.6%         0.94
+
+========================================================================================================
+TABLE 6 - policy back-test per ware type, held slot-days CREDITED at the
+          type's opportunity rate, so a Hold is only worth taking if waiting
+          beats handing the slot to something else.
+========================================================================================================
+
+  Materia  -  171 Wares  |  gap 0.5d  |  horizon 3d, step 1d, window 30d
+  portfolio opportunity rate: 130.0 gil/slot-day
+    policy            rel(portfolio)   rel(own)  rel per-unit    wins    hold   unsold
+    ----------------------------------------------------------------------------------
+    floor 95%                   0.97       0.94          0.97     39%     69%      48%
+    floor 90%                   0.89       0.94          0.93     12%     64%      46%
+    floor 80%                   0.80       0.95          0.91      9%     56%      42%
+    floor 70%                   0.74       0.93          0.87      5%     49%      40%
+    q25                         0.72       0.88          0.72     21%      0%      32%
+    undercut -5%                0.68       0.77          0.62      6%      0%      31%
+    undercut -1g                0.66       0.77          0.64      1%      0%      32%
+    match                       0.66       0.76          0.63      2%      0%      33%
+    median                      0.62       0.77          0.84      6%      0%      43%
+    trimmed mean                0.59       0.74          0.83      5%      0%      47%
+    median +10%                 0.47       0.59          0.70      2%      0%      56%
+    spread across policies: portfolio 0.50, own 0.36
+
+  Material  -  1,961 Wares  |  gap 1.5d  |  horizon 9d, step 1d, window 30d
+  portfolio opportunity rate: 155.2 gil/slot-day
+    policy            rel(portfolio)   rel(own)  rel per-unit    wins    hold   unsold
+    ----------------------------------------------------------------------------------
+    floor 95%                   0.92       0.90          0.94     36%     73%      36%
+    floor 90%                   0.84       0.89          0.90     21%     70%      34%
+    floor 80%                   0.80       0.90          0.85     14%     64%      31%
+    floor 70%                   0.76       0.90          0.81     11%     57%      29%
+    q25                         0.70       0.81          0.65     21%      0%      21%
+    undercut -5%                0.63       0.72          0.53      9%      0%      20%
+    undercut -1g                0.62       0.70          0.53      2%      0%      21%
+    match                       0.61       0.70          0.53      4%      0%      21%
+    median                      0.61       0.75          0.83      7%      0%      31%
+    trimmed mean                0.59       0.74          0.90      8%      0%      34%
+    median +10%                 0.48       0.62          0.78      3%      0%      38%
+    spread across policies: portfolio 0.45, own 0.28
+
+  Consumable  -  715 Wares  |  gap 6.4d  |  horizon 39d, step 5d, window 39d
+  portfolio opportunity rate: 131.8 gil/slot-day
+    policy            rel(portfolio)   rel(own)  rel per-unit    wins    hold   unsold
+    ----------------------------------------------------------------------------------
+    floor 70%                   0.73       0.97          0.78     15%     61%       6%
+    trimmed mean                0.71       0.80          0.98     22%      0%      13%
+    q25                         0.70       0.78          0.65     22%      0%       6%
+    median                      0.69       0.75          0.89     11%      0%      11%
+    floor 80%                   0.67       0.94          0.85     10%     64%       8%
+    floor 90%                   0.63       0.94          0.93      9%     67%      11%
+    floor 95%                   0.59       0.94          0.97      7%     70%      10%
+    undercut -5%                0.43       0.56          0.29      7%      0%       1%
+    match                       0.43       0.53          0.30     11%      0%       2%
+    undercut -1g                0.42       0.53          0.30      1%      0%       2%
+    median +10%                 0.41       0.52          0.82      7%      0%      25%
+    spread across policies: portfolio 0.32, own 0.45
+    NOTE: floor 70% and trimmed mean are within 0.02 on the total metric - too close to call from this data alone.
+
+  Gear  -  1,196 Wares  |  gap 12.9d  |  horizon 60d, step 8d, window 60d
+  portfolio opportunity rate: 6,880.6 gil/slot-day
+    policy            rel(portfolio)   rel(own)  rel per-unit    wins    hold   unsold
+    ----------------------------------------------------------------------------------
+    floor 80%                   0.79       0.96          0.78     13%     63%       2%
+    floor 70%                   0.77       0.99          0.73     16%     58%       1%
+    floor 90%                   0.72       0.95          0.87      7%     67%       4%
+    q25                         0.71       0.80          0.73     21%      0%       2%
+    floor 95%                   0.71       0.95          0.91      3%     69%       5%
+    undercut -5%                0.57       0.69          0.41      5%      0%       0%
+    trimmed mean                0.57       0.73          0.95     15%      0%       6%
+    undercut -1g                0.57       0.69          0.43      0%      0%       0%
+    match                       0.57       0.69          0.43     17%      0%       0%
+    median                      0.55       0.69          0.91      9%      0%       6%
+    median +10%                 0.31       0.42          0.99      7%      0%      14%
+    spread across policies: portfolio 0.48, own 0.57
+    NOTE: floor 80% and floor 70% are within 0.02 on the total metric - too close to call from this data alone.
+
+  Furnishing  -  1,259 Wares  |  gap 4.5d  |  horizon 27d, step 3d, window 30d
+  portfolio opportunity rate: 1,801.9 gil/slot-day
+    policy            rel(portfolio)   rel(own)  rel per-unit    wins    hold   unsold
+    ----------------------------------------------------------------------------------
+    floor 95%                   0.73       0.89          0.88     25%     80%      18%
+    floor 90%                   0.73       0.89          0.85     20%     75%      17%
+    floor 80%                   0.72       0.89          0.82     17%     66%      14%
+    floor 70%                   0.70       0.89          0.78     13%     59%      11%
+    undercut -5%                0.60       0.80          0.52     15%      0%       4%
+    undercut -1g                0.55       0.73          0.53      2%      0%       6%
+    match                       0.55       0.71          0.53     10%      0%       6%
+    q25                         0.47       0.71          0.73     10%      0%      12%
+    trimmed mean                0.35       0.61          0.93      9%      0%      22%
+    median                      0.33       0.59          0.86      4%      0%      20%
+    median +10%                 0.20       0.41          0.79      2%      0%      31%
+    spread across policies: portfolio 0.54, own 0.48
+    NOTE: floor 95% and floor 90% are within 0.00 on the total metric - too close to call from this data alone.
+
+  Collectible  -  856 Wares  |  gap 3.1d  |  horizon 19d, step 2d, window 30d
+  portfolio opportunity rate: 4,137.7 gil/slot-day
+    policy            rel(portfolio)   rel(own)  rel per-unit    wins    hold   unsold
+    ----------------------------------------------------------------------------------
+    floor 95%                   0.83       0.86          0.92     32%     71%      21%
+    floor 90%                   0.77       0.86          0.91     19%     65%      19%
+    floor 80%                   0.77       0.88          0.87     12%     55%      16%
+    undercut -5%                0.76       0.87          0.64     25%      0%       8%
+    floor 70%                   0.75       0.89          0.84     10%     46%      15%
+    undercut -1g                0.61       0.76          0.64      2%      0%      10%
+    match                       0.60       0.75          0.64      9%      0%      11%
+    q25                         0.46       0.68          0.75      9%      0%      16%
+    trimmed mean                0.31       0.51          0.87      4%      0%      26%
+    median                      0.30       0.52          0.83      3%      0%      24%
+    median +10%                 0.16       0.33          0.70      1%      0%      38%
+    spread across policies: portfolio 0.67, own 0.55
+
+  Miscellany  -  53 Wares  |  gap 3.3d  |  horizon 20d, step 2d, window 30d
+  portfolio opportunity rate: 69,125.6 gil/slot-day
+    policy            rel(portfolio)   rel(own)  rel per-unit    wins    hold   unsold
+    ----------------------------------------------------------------------------------
+    floor 95%                   0.99       0.90          0.99     26%     46%      12%
+    floor 70%                   0.91       0.98          0.84     15%     44%      10%
+    floor 80%                   0.91       0.94          0.89     19%     46%      12%
+    floor 90%                   0.87       0.94          0.98     13%     45%      11%
+    undercut -5%                0.77       0.94          0.56     21%      0%       6%
+    undercut -1g                0.63       0.85          0.58      2%      0%       8%
+    match                       0.61       0.82          0.58     17%      0%       8%
+    q25                         0.32       0.75          0.84      4%      0%      12%
+    trimmed mean                0.27       0.53          0.95      4%      0%      17%
+    median                      0.26       0.58          0.93      4%      0%      17%
+    median +10%                 0.08       0.19          0.70      0%      0%      46%
+    spread across policies: portfolio 0.91, own 0.79
+
+========================================================================================================
+TABLE 7 - MODEL-SUGGESTED starting defaults per ware type
+          Suggestions for approval, not settled defaults.
+========================================================================================================
+  ware type     policy            window  horizon  n_eff   prec                     stack rule   runner-up
+  ----------------------------------------------------------------------------------------------------------------
+  Materia       floor 95%            30d       3d      5   15%   qty ~ 1,800 gil / unit price   floor 90% (+0.08)
+  Material      floor 95%            30d       9d      5   15%   qty ~ 4,290 gil / unit price   floor 90% (+0.08)
+  Consumable    floor 70%            39d      39d      5   15%   qty ~ 6,195 gil / unit price   trimmed mean (+0.02)  <- too close to call
+  Gear          floor 80%            60d      60d      5   15% single unit (1% of Wares stackable)   floor 70% (+0.02)  <- too close to call
+  Furnishing    floor 95%            30d      27d      5   15% single unit (21% of Wares stackable)   floor 90% (+0.00)  <- too close to call
+  Collectible   floor 95%            30d      19d      5   15% single unit (97% of sales are qty 1)   floor 90% (+0.05)
+  Miscellany    floor 95%            30d      20d      5   15% single unit (0% of Wares stackable)   floor 70% (+0.07)
+
+  stack rule: target transaction value divided by unit price, clamped to the
+  item's stack size - so a 20,000 gil/unit ware is offered in small stacks and a
+  50 gil/unit ware in large ones, without either being hardcoded.

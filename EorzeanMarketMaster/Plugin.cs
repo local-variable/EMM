@@ -8,6 +8,7 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using EorzeanMarketMaster.Core;
 using EorzeanMarketMaster.Probe;
+using EorzeanMarketMaster.Store;
 using EorzeanMarketMaster.Ui;
 
 namespace EorzeanMarketMaster;
@@ -44,6 +45,12 @@ public sealed class Plugin : IDalamudPlugin
     private readonly AutoRetainerWatch autoRetainer;
 
     /// <summary>
+    /// What EMM observes, kept somewhere it survives a restart. Null where the store could not be
+    /// opened, which hobbles EMM rather than failing its load - see <see cref="StoreHost"/>.
+    /// </summary>
+    private readonly StoreHost storeHost;
+
+    /// <summary>
     /// The decision seam. Every decision EMM makes will be made behind this one call, and this
     /// side of the boundary only ever fills a <see cref="WorldState"/> or applies an
     /// <see cref="Outcome"/>. It returns an empty Outcome today; the adapters that fill the state
@@ -73,6 +80,16 @@ public sealed class Plugin : IDalamudPlugin
         // The #18 live-session harness. Observation only; see LiveProbe's class comment.
         probe = new LiveProbe();
         autoRetainer = new AutoRetainerWatch(probe, probe.WriteEntry);
+
+        // The store. Opened here rather than in a field initialiser on purpose: field
+        // initialisers run above the top of this constructor, so a throw from one of them cannot
+        // be caught here at all. StoreHost reports failure instead of throwing, but the ordering
+        // is what makes that reliable rather than lucky.
+        storeHost = StoreHost.Open(
+            PluginInterface.AssemblyLocation.Directory?.FullName!,
+            PluginInterface.ConfigDirectory.FullName);
+
+        Log.Information("EMM {Status}", storeHost.Status);
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
@@ -125,6 +142,12 @@ public sealed class Plugin : IDalamudPlugin
         // the subscription that can close it goes away.
         autoRetainer.Dispose();
         probe.Dispose();
+
+        // Before ECommons, and it matters: disposing the store checkpoints its write-ahead log and
+        // releases the file handle. A handle still open after unload is what makes an in-place
+        // plugin update fail while the game is running.
+        storeHost.Dispose();
+
         ECommons.ECommonsMain.Dispose();
 
         CommandManager.RemoveHandler(CommandName);

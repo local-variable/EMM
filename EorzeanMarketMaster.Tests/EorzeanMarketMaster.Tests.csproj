@@ -21,12 +21,29 @@
     <OutputType>Exe</OutputType>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+
+    <!--
+      The store tests run against real SQLite, file-backed in a temp directory, so this project
+      needs an actual e_sqlite3 to hand SqliteEngine.
+
+      RuntimeIdentifier pins it to the one binary that matters. Without it SQLitePCLRaw.lib
+      lays down all four RIDs (~7.5 MB) under runtimes/; with it, one 1.89 MB file lands in the
+      output root, which is also where the plugin puts it - so the tests exercise the same layout
+      the packaged plugin ships. AppendRuntimeIdentifierToOutputPath is off so that the output
+      path stays bin/<Config>/net10.0/ and nothing downstream has to learn a new one.
+    -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="xunit.v3" Version="3.2.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+
+    <!-- The native engine under test. Core deliberately does not reference this; see its csproj. -->
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
   </ItemGroup>
 
   <ItemGroup>

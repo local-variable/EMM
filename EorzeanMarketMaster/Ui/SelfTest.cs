@@ -257,6 +257,41 @@ internal sealed class SelfTest
         else
             Plugin.Log.Error("[selftest] {Pass}/{Total} passed, {Failed} FAILED",
                 results.Count - failed.Count, results.Count, failed.Count);
+
+        Announce(failed);
+    }
+
+    /// <summary>
+    /// Puts the verdict in chat as well as the log.
+    ///
+    /// The log is the record, but it costs a trip through /xllog to read, and a harness whose
+    /// result is that far away invites "it ran, so it worked" — which is the exact reading that
+    /// let an earlier version of this class announce itself, do nothing, and report nothing. A
+    /// line in chat makes the result the first thing seen rather than something looked up.
+    ///
+    /// A failure names its cases rather than only counting them, because a bare "78/82" sends the
+    /// reader to the log anyway and the whole point is not having to go. The list is capped: a
+    /// broken rail fails a case per section per rail state, and thirty lines of chat would bury
+    /// the count that matters.
+    /// </summary>
+    private void Announce(IReadOnlyList<(string Case, bool Pass, string Detail)> failed)
+    {
+        if (failed.Count == 0)
+        {
+            Plugin.ChatGui.Print($"[EMM selftest] {results.Count}/{results.Count} passed");
+            return;
+        }
+
+        const int Listed = 5;
+
+        var named = string.Join(", ", failed.Take(Listed).Select(f => f.Case));
+        var rest = failed.Count > Listed ? $", and {failed.Count - Listed} more" : string.Empty;
+
+        // PrintError, not Print: a failed self-test is the one thing here that must not read like
+        // ordinary output scrolling past.
+        Plugin.ChatGui.PrintError(
+            $"[EMM selftest] {results.Count - failed.Count}/{results.Count} passed, {failed.Count} FAILED: " +
+            $"{named}{rest} — see /xllog for details");
     }
 
     /// <summary>The binding hands back a pointer into ImGui's style, so it needs dereferencing.</summary>

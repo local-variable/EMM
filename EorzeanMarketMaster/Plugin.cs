@@ -8,6 +8,7 @@ using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using EorzeanMarketMaster.Core;
 using EorzeanMarketMaster.Graph;
+using EorzeanMarketMaster.Holdings;
 using EorzeanMarketMaster.Ingest;
 using EorzeanMarketMaster.Probe;
 using EorzeanMarketMaster.Store;
@@ -65,6 +66,12 @@ public sealed class Plugin : IDalamudPlugin
     internal GraphHost? Chart { get; }
 
     /// <summary>
+    /// What the Player owns, and where. Null where the store could not be opened - Holdings are
+    /// last-seen state, and state nobody can remember is not worth reading.
+    /// </summary>
+    internal HoldingsHost? Owned { get; }
+
+    /// <summary>
     /// Which Ware every surface is looking at. One object rather than one per section, so a
     /// Freshness and a graph on screen together are always about the same Ware.
     /// </summary>
@@ -119,6 +126,9 @@ public sealed class Plugin : IDalamudPlugin
         Chart = storeHost.Store is null
             ? null
             : new GraphHost(storeHost.Store, storeHost.Gate, selection);
+        Owned = storeHost.Store is null
+            ? null
+            : new HoldingsHost(storeHost.Store, storeHost.Gate);
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
@@ -177,6 +187,12 @@ public sealed class Plugin : IDalamudPlugin
         // under a write is how a database gets a torn page. Disposing the host waits for it.
         Scan?.Dispose();
 
+        // Also before the store, and for a stronger reason than the scan's: a reading it is
+        // holding is a Retainer's contents, and nothing can produce those again except the Player
+        // going back to a bell and opening it. This is the one place in EMM that waits for the
+        // store gate rather than giving up on it.
+        Owned?.Dispose();
+
         // Before ECommons, and it matters: disposing the store checkpoints its write-ahead log and
         // releases the file handle. A handle still open after unload is what makes an in-place
         // plugin update fail while the game is running.
@@ -191,6 +207,12 @@ public sealed class Plugin : IDalamudPlugin
     private void DrawUi()
     {
         selfTest.Tick();
+
+        // Whether or not the window is open, and unlike the two below. A Retainer's stock is
+        // readable only while that Retainer is open, so the chance to read one arrives when the
+        // Player opens it rather than when they happen to be looking at EMM - and a Player opening
+        // a Retainer is not usually looking at EMM at all.
+        Owned?.Tick(DateTimeOffset.UtcNow);
 
         // Only while the window is open. The Scan section's figures are hours old by nature, so
         // there is nothing to keep warm - and a query a second against the store for a window

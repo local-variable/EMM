@@ -98,6 +98,10 @@ internal static class ScanTab
             host.Select(new WareId((uint)itemId, highQuality ? Quality.High : Quality.Normal));
         }
 
+        // The icon before the name, matching the Pricing section's selector. The two sections share
+        // one Ware, so a Ware named in one and illustrated in the other would read as two things.
+        WareIcon.Inline(host.Selected);
+
         ImGui.PushStyleColor(ImGuiCol.Text, Palette.Muted);
         Layout.TextWrapped(NameOf(host.Selected));
 
@@ -320,21 +324,7 @@ internal static class ScanTab
     }
 
     private static string NameOf(WareId ware)
-    {
-        try
-        {
-            var sheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>();
-            var name = sheet.GetRowOrDefault(ware.ItemId)?.Name.ExtractText();
-
-            return string.IsNullOrWhiteSpace(name) ? $"Item {ware.ItemId}" : name;
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Warning(ex, "Could not read the name of item {ItemId}", ware.ItemId);
-
-            return $"Item {ware.ItemId}";
-        }
-    }
+        => ItemFacts.Name(ware.ItemId);
 
     private static string SourceOf(Source source) => source switch
     {

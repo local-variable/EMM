@@ -1,4 +1,5 @@
 using System.Globalization;
+using EorzeanMarketMaster.Core.Holdings;
 using Microsoft.Data.Sqlite;
 
 namespace EorzeanMarketMaster.Core.Store;
@@ -594,6 +595,180 @@ public sealed class MarketStore : IDisposable
         return value is null or DBNull
             ? null
             : DateTimeOffset.FromUnixTimeSeconds(Convert.ToInt64(value, CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>
+    /// Records what EMM saw in one place, replacing whatever it last saw there.
+    ///
+    /// <b>A replace, never a merge, and the transaction is what makes that true.</b> A reading is
+    /// the complete contents of its place, so the previous rows go before the new ones arrive - a
+    /// Ware that has since sold has to disappear, and an insert-or-update would leave it behind
+    /// forever. The delete and the insert are one transaction because a crash between them would
+    /// leave the Player's own Retainer looking empty.
+    /// </summary>
+    /// <param name="reading">What was seen. Empty contents are recorded as such, not skipped.</param>
+    public void WriteHoldings(HoldingsReading reading)
+    {
+        ArgumentNullException.ThrowIfNull(reading);
+
+        var character = reading.Character;
+        var retainer = reading.Retainer?.Retainer ?? string.Empty;
+
+        using var transaction = connection.BeginTransaction();
+
+        using (var clear = connection.CreateCommand())
+        {
+            clear.Transaction = transaction;
+            clear.CommandText =
+                $"""
+                 DELETE FROM {StoreSchema.Holding}
+                 WHERE character_name = $character AND retainer_name = $retainer
+                 """;
+
+            Parameter(clear, "$character", character);
+            Parameter(clear, "$retainer", retainer);
+            clear.ExecuteNonQuery();
+        }
+
+        using (var header = connection.CreateCommand())
+        {
+            // An upsert rather than INSERT OR REPLACE. REPLACE deletes the row before reinserting
+            // it, and the rows above hang off it by a cascading foreign key - so the tidy-looking
+            // spelling would delete the contents this statement is being written to keep.
+            header.Transaction = transaction;
+            header.CommandText =
+                $"""
+                 INSERT INTO {StoreSchema.HoldingReading}
+                     (character_name, retainer_name, observed_at, true_as_of, source)
+                 VALUES ($character, $retainer, $observed, $true, $source)
+                 ON CONFLICT (character_name, retainer_name) DO UPDATE SET
+                     observed_at = excluded.observed_at,
+                     true_as_of = excluded.true_as_of,
+                     source = excluded.source
+                 """;
+
+            Parameter(header, "$character", character);
+            Parameter(header, "$retainer", retainer);
+            Parameter(header, "$observed", reading.ObservedAt.ToUnixTimeSeconds());
+            Parameter(header, "$true", StoredMoment(reading.TrueAsOf));
+            Parameter(header, "$source", (long)reading.Source);
+            header.ExecuteNonQuery();
+        }
+
+        if (reading.Held.Count > 0)
+        {
+            using var insert = connection.CreateCommand();
+
+            insert.Transaction = transaction;
+            insert.CommandText =
+                $"""
+                 INSERT INTO {StoreSchema.Holding}
+                     (character_name, retainer_name, place, item_id, quality, ordinal, units, unit_price)
+                 VALUES ($character, $retainer, $place, $item, $quality, $ordinal, $units, $price)
+                 """;
+
+            Parameter(insert, "$character", character);
+            Parameter(insert, "$retainer", retainer);
+
+            var place = Parameter(insert, "$place", 0L);
+            var item = Parameter(insert, "$item", 0L);
+            var quality = Parameter(insert, "$quality", 0L);
+            var ordinal = Parameter(insert, "$ordinal", 0L);
+            var units = Parameter(insert, "$units", 0L);
+            var price = Parameter(insert, "$price", DBNull.Value);
+
+            foreach (var line in reading.Held)
+            {
+                place.Value = (long)line.Place;
+                item.Value = (long)line.Ware.ItemId;
+                quality.Value = (long)line.Ware.Quality;
+                ordinal.Value = (long)line.Ordinal;
+                units.Value = (long)line.Units;
+                price.Value = line.AskingPrice is { } asking ? asking.Gil : DBNull.Value;
+
+                insert.ExecuteNonQuery();
+            }
+        }
+
+        transaction.Commit();
+    }
+
+    /// <summary>
+    /// Every place EMM has read Holdings in, with what it saw there.
+    ///
+    /// Read whole rather than by Character: the surface answers "what do I own" across every
+    /// Character, the whole table is bounded by the number of Retainers a Player has, and a query
+    /// per place would be thirty round trips to answer one question.
+    /// </summary>
+    /// <returns>The readings, ordered by Character then Retainer.</returns>
+    public IReadOnlyList<HoldingsReading> ReadHoldings()
+    {
+        var lines = new Dictionary<(string Character, string Retainer), List<HeldWare>>();
+
+        using (var contents = connection.CreateCommand())
+        {
+            contents.CommandText =
+                $"""
+                 SELECT character_name, retainer_name, place, item_id, quality, ordinal, units, unit_price
+                 FROM {StoreSchema.Holding}
+                 ORDER BY character_name, retainer_name, place, item_id, quality, ordinal
+                 """;
+
+            using var reader = contents.ExecuteReader();
+
+            while (reader.Read())
+            {
+                var key = (reader.GetString(0), reader.GetString(1));
+
+                if (!lines.TryGetValue(key, out var held))
+                {
+                    held = [];
+                    lines[key] = held;
+                }
+
+                held.Add(new HeldWare(
+                    new WareId((uint)reader.GetInt64(3), (Quality)reader.GetInt64(4)),
+                    (HoldingPlace)reader.GetInt64(2),
+                    (int)reader.GetInt64(6),
+                    reader.IsDBNull(7) ? null : new UnitPrice(reader.GetInt64(7)))
+                {
+                    Ordinal = (int)reader.GetInt64(5),
+                });
+            }
+        }
+
+        var readings = new List<HoldingsReading>();
+
+        using (var headers = connection.CreateCommand())
+        {
+            headers.CommandText =
+                $"""
+                 SELECT character_name, retainer_name, observed_at, true_as_of, source
+                 FROM {StoreSchema.HoldingReading}
+                 ORDER BY character_name, retainer_name
+                 """;
+
+            using var reader = headers.ExecuteReader();
+
+            while (reader.Read())
+            {
+                var character = reader.GetString(0);
+                var retainer = reader.GetString(1);
+
+                readings.Add(new HoldingsReading(
+                    character,
+
+                    // The empty string is the Character's own bags. It cannot be a Retainer name,
+                    // which is what lets one column carry both without a second flag.
+                    retainer.Length == 0 ? null : new RetainerId(character, retainer),
+                    DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(2)),
+                    reader.IsDBNull(3) ? null : DateTimeOffset.FromUnixTimeSeconds(reader.GetInt64(3)),
+                    (Source)reader.GetInt64(4),
+                    lines.TryGetValue((character, retainer), out var held) ? held : []));
+            }
+        }
+
+        return readings;
     }
 
     /// <summary>

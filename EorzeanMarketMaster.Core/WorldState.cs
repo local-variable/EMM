@@ -1,4 +1,6 @@
-﻿namespace EorzeanMarketMaster.Core;
+﻿using EorzeanMarketMaster.Core.Holdings;
+
+namespace EorzeanMarketMaster.Core;
 
 /// <summary>
 /// Everything the decision engine is allowed to see. Nothing below this line reaches the game,
@@ -17,7 +19,12 @@
 /// </param>
 /// <param name="Tier">What EMM can do unaided in this session.</param>
 /// <param name="SellSpace">Listing slots per Retainer, and how many are already spoken for. Owned by #35.</param>
-/// <param name="Holdings">Every unit of every Ware the Player owns anywhere. Owned by #26.</param>
+/// <param name="Holdings">
+/// Every unit of every Ware the Player owns anywhere, each carrying how old that statement is.
+/// Shape in Holdings/Holding.cs. Cost Basis is deliberately absent from it rather than guessed at -
+/// it is recorded per Lot at acquisition, and inventing a single per-Ware figure would bake in the
+/// exact averaging #27 exists to avoid.
+/// </param>
 /// <param name="Snapshots">Observed Listings, each carrying when it was observed. Shape in Observations.cs.</param>
 /// <param name="History">Accumulated Sales, one series per Ware. Shape in History.cs.</param>
 /// <param name="Strategies">Which Strategy applies where, Ware over Group over Retainer. Owned by #34.</param>
@@ -65,16 +72,6 @@ public sealed record SellSpace(int Capacity, int Listed)
     /// <summary>Slots the allocator has left to fill.</summary>
     public int Free => Capacity - Listed;
 }
-
-/// <summary>
-/// Units of one Ware the Player owns in one place.
-///
-/// Placeholder: shape owned by #26 (Holdings) and #27 (Cost Basis and FIFO Lots). Cost Basis in
-/// particular is deliberately absent here rather than guessed at - it is recorded per Lot at
-/// acquisition, and inventing a single per-Ware figure now would bake in the exact averaging
-/// that #27 exists to avoid.
-/// </summary>
-public sealed record Holding;
 
 /// <summary>
 /// Which Strategy applies to what. Resolution is Ware over Group over Retainer, with an

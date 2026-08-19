@@ -1,0 +1,121 @@
+{
+    "itemID":  5,
+    "worldID":  79,
+    "lastUploadTime":  1787123662257,
+    "listings":  [
+                     {
+                         "lastReviewTime":  1787123658,
+                         "pricePerUnit":  43,
+                         "quantity":  1000,
+                         "stainID":  0,
+                         "creatorName":  "",
+                         "creatorID":  null,
+                         "hq":  false,
+                         "isCrafted":  false,
+                         "listingID":  "4022012066",
+                         "materia":  [
+
+                                     ],
+                         "onMannequin":  false,
+                         "retainerCity":  1,
+                         "retainerID":  "4011012033",
+                         "retainerName":  "Alderleaf",
+                         "sellerID":  null,
+                         "total":  43000,
+                         "tax":  2150
+                     },
+                     {
+                         "lastReviewTime":  1787123658,
+                         "pricePerUnit":  44,
+                         "quantity":  1013,
+                         "stainID":  0,
+                         "creatorName":  "",
+                         "creatorID":  null,
+                         "hq":  false,
+                         "isCrafted":  false,
+                         "listingID":  "4044012132",
+                         "materia":  [
+
+                                     ],
+                         "onMannequin":  false,
+                         "retainerCity":  4,
+                         "retainerID":  "4033012099",
+                         "retainerName":  "Nettlewick",
+                         "sellerID":  null,
+                         "total":  44572,
+                         "tax":  2228
+                     },
+                     {
+                         "lastReviewTime":  1787123658,
+                         "pricePerUnit":  45,
+                         "quantity":  1000,
+                         "stainID":  0,
+                         "creatorName":  "",
+                         "creatorID":  null,
+                         "hq":  false,
+                         "isCrafted":  false,
+                         "listingID":  "4066012198",
+                         "materia":  [
+
+                                     ],
+                         "onMannequin":  false,
+                         "retainerCity":  4,
+                         "retainerID":  "4055012165",
+                         "retainerName":  "Sorrelgate",
+                         "sellerID":  null,
+                         "total":  45000,
+                         "tax":  2250
+                     }
+                 ],
+    "recentHistory":  [
+
+                      ],
+    "currentAveragePrice":  769744.94,
+    "currentAveragePriceNQ":  769744.94,
+    "currentAveragePriceHQ":  0,
+    "regularSaleVelocity":  0,
+    "nqSaleVelocity":  0,
+    "hqSaleVelocity":  0,
+    "averagePrice":  0,
+    "averagePriceNQ":  0,
+    "averagePriceHQ":  0,
+    "minPrice":  43,
+    "minPriceNQ":  43,
+    "minPriceHQ":  0,
+    "maxPrice":  10000000,
+    "maxPriceNQ":  10000000,
+    "maxPriceHQ":  0,
+    "stackSizeHistogram":  {
+                               "1":  1,
+                               "66":  1,
+                               "100":  1,
+                               "730":  1,
+                               "1000":  4,
+                               "1013":  1,
+                               "1116":  1,
+                               "2226":  1,
+                               "4000":  1,
+                               "5000":  1
+                           },
+    "stackSizeHistogramNQ":  {
+                                 "1":  1,
+                                 "66":  1,
+                                 "100":  1,
+                                 "730":  1,
+                                 "1000":  4,
+                                 "1013":  1,
+                                 "1116":  1,
+                                 "2226":  1,
+                                 "4000":  1,
+                                 "5000":  1
+                             },
+    "stackSizeHistogramHQ":  {
+
+                             },
+    "worldName":  "Cactuar",
+    "listingsCount":  3,
+    "recentHistoryCount":  0,
+    "unitsForSale":  18252,
+    "unitsSold":  0,
+    "hasData":  true
+}

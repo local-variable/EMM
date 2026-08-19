@@ -277,7 +277,12 @@ public sealed class MainWindow : Window, IDisposable
             ImGui.Separator();
             ImGui.Spacing();
 
-            ImGui.TextColored(Palette.Muted, "Not built yet — this is the scaffold.");
+            // Scan is the first section with a body. The rest are still the scaffold, and saying
+            // so is better than a plausible-looking empty panel.
+            if (label == "Scan")
+                ScanTab.Draw(plugin.Scan);
+            else
+                ImGui.TextColored(Palette.Muted, "Not built yet — this is the scaffold.");
 
             if (UiProbe.Capturing)
             {

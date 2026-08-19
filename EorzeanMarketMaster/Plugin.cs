@@ -7,6 +7,7 @@ using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using EorzeanMarketMaster.Core;
+using EorzeanMarketMaster.Ingest;
 using EorzeanMarketMaster.Probe;
 using EorzeanMarketMaster.Store;
 using EorzeanMarketMaster.Ui;
@@ -51,6 +52,12 @@ public sealed class Plugin : IDalamudPlugin
     private readonly StoreHost storeHost;
 
     /// <summary>
+    /// Aggregator ingest and the state the Scan section draws. Null where the store could not be
+    /// opened - there is nowhere to put an observation, so there is nothing to fetch.
+    /// </summary>
+    internal ScanHost? Scan { get; }
+
+    /// <summary>
     /// The decision seam. Every decision EMM makes will be made behind this one call, and this
     /// side of the boundary only ever fills a <see cref="WorldState"/> or applies an
     /// <see cref="Outcome"/>. It returns an empty Outcome today; the adapters that fill the state
@@ -90,6 +97,8 @@ public sealed class Plugin : IDalamudPlugin
             PluginInterface.ConfigDirectory.FullName);
 
         Log.Information("EMM {Status}", storeHost.Status);
+
+        Scan = storeHost.Store is null ? null : new ScanHost(storeHost.Store, Configuration);
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
@@ -143,6 +152,11 @@ public sealed class Plugin : IDalamudPlugin
         autoRetainer.Dispose();
         probe.Dispose();
 
+        // Before the store, and it matters as much as the ordering below: ScanHost may have a
+        // refresh in flight holding the store's connection, and disposing that connection out from
+        // under a write is how a database gets a torn page. Disposing the host waits for it.
+        Scan?.Dispose();
+
         // Before ECommons, and it matters: disposing the store checkpoints its write-ahead log and
         // releases the file handle. A handle still open after unload is what makes an in-place
         // plugin update fail while the game is running.
@@ -157,6 +171,17 @@ public sealed class Plugin : IDalamudPlugin
     private void DrawUi()
     {
         selfTest.Tick();
+
+        // Only while the window is open. The Scan section's figures are hours old by nature, so
+        // there is nothing to keep warm - and a query a second against the store for a window
+        // nobody is looking at is a cost with no reader.
+        if (mainWindow.IsOpen)
+        {
+            Scan?.Tick(
+                DateTimeOffset.UtcNow,
+                PlayerState.IsLoaded ? new WorldId(PlayerState.HomeWorld.RowId) : null);
+        }
+
         windowSystem.Draw();
     }
 

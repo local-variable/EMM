@@ -1,0 +1,58 @@
+{
+    "itemID":  5,
+    "worldID":  79,
+    "lastUploadTime":  1787123662245,
+    "entries":  [
+                    {
+                        "hq":  false,
+                        "pricePerUnit":  40,
+                        "quantity":  800,
+                        "buyerName":  "Corvid Ash",
+                        "onMannequin":  false,
+                        "timestamp":  1787100057
+                    },
+                    {
+                        "hq":  false,
+                        "pricePerUnit":  37,
+                        "quantity":  999,
+                        "buyerName":  "Linnet Pyle",
+                        "onMannequin":  false,
+                        "timestamp":  1787100055
+                    },
+                    {
+                        "hq":  false,
+                        "pricePerUnit":  39,
+                        "quantity":  500,
+                        "buyerName":  "Marram Skye",
+                        "onMannequin":  false,
+                        "timestamp":  1787100054
+                    },
+                    {
+                        "hq":  false,
+                        "pricePerUnit":  20,
+                        "quantity":  1,
+                        "buyerName":  "Ossia Brant",
+                        "onMannequin":  false,
+                        "timestamp":  1787100053
+                    }
+                ],
+    "stackSizeHistogram":  {
+                               "1":  1,
+                               "500":  1,
+                               "800":  1,
+                               "999":  1
+                           },
+    "stackSizeHistogramNQ":  {
+                                 "1":  1,
+                                 "500":  1,
+                                 "800":  1,
+                                 "999":  1
+                             },
+    "stackSizeHistogramHQ":  {
+
+                             },
+    "regularSaleVelocity":  328.57144,
+    "nqSaleVelocity":  328.57144,
+    "hqSaleVelocity":  0,
+    "worldName":  "Cactuar"
+}

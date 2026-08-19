@@ -1,0 +1,50 @@
+﻿undercut-formula prototype - Cactuar (Aether) - 2026-08-17T17:20Z
+
+======================================================================================================================
+TABLE 1 - candidate reference statistics, computed now (Cactuar)
+======================================================================================================================
+ware                                  n/30d     minLst     mean30      med30     trim30     vwap30     q25/30      med90
+------------------------------------------------------------------------------------------------------------------------
+Quicktongue Materia XI NQ               748        350        415        317        335        351        215        300
+Gatherer's Guile Materia XI NQ          681      1,187        990        979        956      1,121        809      1,360
+Mythloam Aethersand NQ                   19         94        106         99        104         97         88        178
+Labyrinthos Grape Lamppost NQ            27     30,057     55,231     56,363     55,845     55,231     44,899     20,000
+Gold Thumb's Mallet NQ                    1    120,000    150,709    150,709    150,709    150,709    150,709    199,999
+Gold Thumb's Mallet HQ                    7    429,998    566,296    497,986    566,296    566,296    489,821    517,336
+Flower-wreathed Gazebo NQ                 7      2,038      3,231      3,657      3,231      3,231      2,578      2,078
+Everseeker's Fishing Rod NQ               0      -      -      -      -      -      -      -
+Everseeker's Fishing Rod HQ               0      -      -      -      -      -      -    112,500
+
+  minLst = lowest competing listing on Cactuar, the maintainer's own
+  retainers excluded. '-' = the statistic has no sample to stand on.
+
+======================================================================================================================
+TABLE 3 - what the outliers actually look like (last 30 days of sales)
+======================================================================================================================
+ware                                      n    units        min        q25     median        q75          max   max/med
+-----------------------------------------------------------------------------------------------------------------------
+Quicktongue Materia XI NQ               748    3,974          1        215        317        466       11,000     34.7x
+Gatherer's Guile Materia XI NQ          681    7,512        217        809        979      1,017        2,217      2.3x
+Mythloam Aethersand NQ                   19      377         50         88         99        121          196      2.0x
+Labyrinthos Grape Lamppost NQ            27       27     29,995     44,899     56,363     69,998       70,900      1.3x
+Gold Thumb's Mallet NQ                    1        1    150,709    150,709    150,709    150,709      150,709      1.0x
+Gold Thumb's Mallet HQ                    7        7    489,642    489,821    497,986    498,402      999,998      2.0x
+Flower-wreathed Gazebo NQ                 7        7      2,000      2,578      3,657      3,900        4,000      1.1x
+
+======================================================================================================================
+TABLE 2 - instability: spread of the statistic itself, recomputed daily over 60 days
+         (max-min as a % of its own median - lower is steadier)
+======================================================================================================================
+ware                                    minLst     mean7    mean30      med7     med30    trim30    vwap30    q25/30
+--------------------------------------------------------------------------------------------------------------------
+Quicktongue Materia XI NQ                 205%       79%       41%       71%       22%       28%       40%        5%
+Gatherer's Guile Materia XI NQ            232%       70%       74%       90%       72%       72%       72%       41%
+Mythloam Aethersand NQ                    126%      316%      168%      416%      102%      164%      158%       73%
+Labyrinthos Grape Lamppost NQ             340%      164%      185%      237%      280%      218%      185%      538%
+Gold Thumb's Mallet NQ                       -       28%       25%       28%       25%       25%       25%       25%
+Gold Thumb's Mallet HQ                    183%       98%       29%      110%       68%       49%       29%       45%
+Flower-wreathed Gazebo NQ                 340%      309%      135%      289%      254%      156%      135%      323%
+Everseeker's Fishing Rod NQ                  -         -         -         -         -         -         -         -
+Everseeker's Fishing Rod HQ                  -        5%       52%        5%       52%       52%       52%       29%
+
+  '-' = fewer than 5 of the 60 days could compute the statistic at all.

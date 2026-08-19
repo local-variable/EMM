@@ -1,0 +1,49 @@
+﻿DC reversion test - Cactuar within Aether
+  subset: 764 items
+  DC history already cached (764 items)
+  Aether series loaded for 764 items
+
+================================================================================================
+TABLE 8a - does the Aether gap predict Cactuar's next 30 days?
+================================================================================================
+  SHARED-BASELINE version - carries a division bias, see 8b.
+  ware type       wares  r(own dev)   r(DC gap)  partial DC   reading
+  -------------------------------------------------------------------------------
+  Materia            89      -0.515      -0.624      -0.461   DC adds signal
+  Consumable        108      -0.383      -0.418      -0.314   DC adds signal
+  Gear              110      -0.306      -0.204      -0.114   DC adds signal
+  Furnishing        112      -0.128      -0.099      -0.056   marginal
+  Collectible       107      -0.388      -0.292      -0.178   DC adds signal
+  Miscellany         37      +0.254      -0.561      -0.574   DC adds signal
+  ALL               569      -0.349      -0.285      -0.185   DC adds signal
+
+================================================================================================
+TABLE 8b - the same question, split-half baseline (the one to trust)
+================================================================================================
+  Predictors from days 30-15 back; outcome measured against days 15-0.
+  ware type       wares  r(own dev)   r(DC gap)  partial DC   reading
+  -------------------------------------------------------------------------------
+  Materia            75      -0.282      -0.402      -0.301   DC adds signal
+  Consumable         93      +0.034      +0.053      +0.040   DC adds nothing
+  Gear               95      -0.279      -0.027      +0.093   DC adds nothing
+  Furnishing        102      +0.063      +0.063      +0.043   DC adds nothing
+  Collectible       103      -0.376      -0.194      -0.071   marginal
+  Miscellany         25      +0.382      -0.152      -0.199   DC adds signal
+  ALL               494      -0.196      -0.095      -0.007   DC adds nothing
+
+  Negative = a World trading above the reference falls back afterwards.
+  'partial DC' is the DC gap's correlation with what happened next AFTER the
+  World's own deviation from its 180-day level is accounted for. That is the
+  column that matters: the first two overlap heavily with each other.
+
+  Why two panels: in 8a the same 30-day median sits in the denominator of both
+  predictors and the numerator of the outcome, so noise in that one estimate
+  drags the correlation negative by itself. 8b builds the predictors from the
+  older half of the window and measures the outcome against the newer half, so
+  no estimate is shared. Where 8a and 8b disagree, 8b is the honest number and
+  the difference between them is the size of the artefact.
+
+  Caveats that neither panel fixes: one 30-day forward window on one World, so
+  this is a single observation of a relationship rather than an estimate of its
+  stability; and the Aether median is itself dominated by whichever worlds
+  upload most.

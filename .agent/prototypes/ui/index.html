@@ -1,0 +1,3157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>EMM UI prototype — ticket #13</title>
+<style>
+/* ============================================================================
+   EMM UI prototype. Structure is borrowed from Henchman's shell (a collapsible
+   icon nav rail, a content header, cards, a separate status window); the palette
+   is EMM's own — the deep navy and gold of the approved plugin icon, with the
+   green price series from the #12 graph.
+   ========================================================================== */
+
+:root {
+  --bg-dark:#0d1320; --bg-mid:#131b2a; --bg-light:#1a2434; --card:#172032;
+  --card-2:#1e293c; --border:#26324a; --border-2:#1a2334;
+  --ink:#e9ecf3; --ink-2:#9aa7bd; --ink-3:#66738c;
+  --accent:#e0b64a; --accent-dim:#9a7c2e; --accent-soft:rgba(224,182,74,0.12);
+  --series:#1eb37f; --series-dim:rgba(30,179,127,0.16);
+  --nq:#4a90e2; --hq:#e07a3c;
+  --ok:#3fb950; --caution:#e8b339; --warning:#ec835a; --severe:#d6544f;
+  --grid:#202a3d; --axis:#33405a;
+  --danger:#c0453f;
+  --game-bg:rgba(14,19,30,0.94); --game-border:#5d6a85; --game-ink:#dfe3ea;
+  --shadow:0 10px 34px rgba(0,0,0,0.55);
+}
+[data-theme="light"] {
+  --bg-dark:#e7e9ee; --bg-mid:#f4f5f8; --bg-light:#ffffff; --card:#ffffff;
+  --card-2:#f2f4f8; --border:#d3d8e2; --border-2:#e3e7ee;
+  --ink:#131822; --ink-2:#4f5a6d; --ink-3:#828da0;
+  --accent:#a8791a; --accent-dim:#c8a24a; --accent-soft:rgba(168,121,26,0.12);
+  --series:#12805a; --series-dim:rgba(18,128,90,0.14);
+  --nq:#2a6fc0; --hq:#c05d21;
+  --ok:#1f8a35; --caution:#a9791a; --warning:#c05f34; --severe:#b53a35;
+  --grid:#e4e7ee; --axis:#c2c9d6;
+  --shadow:0 10px 30px rgba(20,30,50,0.20);
+}
+
+* { box-sizing:border-box; }
+/* Any rule that sets `display` outbids the `hidden` attribute, which had left two panels
+   permanently on screen. Nothing in this file gets to win against hidden. */
+[hidden] { display:none !important; }
+html,body { margin:0; height:100%; overflow:hidden; }
+body {
+  font:13px/1.45 "Segoe UI", system-ui, sans-serif;
+  background:#05070c; color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+}
+button { font:inherit; color:inherit; cursor:pointer; }
+/* Native form controls do NOT inherit colour, so on a dark surface they render the
+   platform's black-on-white and become unreadable. Every one of them is pinned. */
+select, input, textarea {
+  font:inherit; color:var(--ink); background:var(--card-2);
+  border:1px solid var(--border); border-radius:5px; padding:3px 6px;
+}
+select { cursor:pointer; }
+option { background:var(--bg-mid); color:var(--ink); }
+input[type=checkbox] {
+  accent-color:var(--accent); background:none; border:0; padding:0;
+  width:13px; height:13px; cursor:pointer;
+}
+input:disabled, select:disabled { color:var(--ink-3); cursor:default; }
+.num { font-variant-numeric:tabular-nums; }
+
+/* --- prototype chrome (NOT part of EMM) ---------------------------------- */
+#proto {
+  display:flex; flex-wrap:wrap; gap:14px; align-items:center;
+  padding:9px 14px; background:#0a0d14; border-bottom:1px solid #1c2434;
+  position:sticky; top:0; z-index:100;
+}
+#proto .tag {
+  font-size:10px; letter-spacing:.14em; text-transform:uppercase;
+  color:#5c6a84; border:1px solid #232d40; border-radius:3px;
+  padding:3px 7px;
+}
+#proto label { font-size:11px; color:#7c89a1; margin-right:5px; }
+#proto select, #proto .seg {
+  background:#131a28; border:1px solid #26324a; color:#c9d2e2;
+  border-radius:5px; padding:4px 7px; font-size:12px;
+}
+#proto .seg { display:inline-flex; padding:2px; gap:2px; }
+#proto .seg button { background:none; border:0; padding:3px 9px; border-radius:4px; color:#7c89a1; font-size:12px; }
+#proto .seg button[aria-pressed="true"] { background:#26324a; color:#e9ecf3; }
+
+/* --- the stage: a stand-in for the game behind the plugin ---------------- */
+#stage {
+  position:relative; height:calc(100vh - 47px); min-height:760px; overflow:hidden;
+  background:
+    radial-gradient(1100px 620px at 22% 32%, #24313f 0%, #131a24 55%, #080b11 100%);
+}
+#stage::after {                                   /* a hint of scenery, not art */
+  content:""; position:absolute; inset:0; pointer-events:none;
+  background:
+    linear-gradient(transparent 62%, rgba(6,9,14,0.75) 100%),
+    repeating-linear-gradient(115deg, rgba(255,255,255,0.012) 0 2px, transparent 2px 9px);
+}
+.scene { display:none; position:absolute; inset:0; }
+.scene.on { display:block; }
+
+/* --- FFXIV window stand-ins --------------------------------------------- */
+.game-win {
+  position:absolute; background:var(--game-bg); color:var(--game-ink);
+  border:1px solid var(--game-border); border-radius:3px; box-shadow:var(--shadow);
+  font-size:12px;
+}
+.game-win .gw-title {
+  padding:6px 10px 5px; border-bottom:1px solid rgba(160,175,205,0.28);
+  letter-spacing:.03em; color:#e8dcb6; font-size:12px;
+}
+.game-win .gw-body { padding:6px; }
+.game-row {
+  padding:6px 9px; border-bottom:1px solid rgba(160,175,205,0.10);
+  display:flex; justify-content:space-between; gap:12px; align-items:center;
+}
+.game-row:last-child { border-bottom:0; }
+.game-row .sub { color:#98a3b8; font-size:11px; }
+.game-row.sel { background:rgba(224,182,74,0.13); box-shadow:inset 2px 0 0 #e0b64a; }
+
+/* --- the EMM window ------------------------------------------------------ */
+.emm {
+  position:absolute; display:flex; flex-direction:column;
+  background:var(--bg-mid); border:1px solid var(--border);
+  border-radius:6px; box-shadow:var(--shadow); overflow:hidden;
+}
+/* The main window always sits above the status strip — the strip is a glance, never
+   something that can cover the thing you are working in. */
+#mainWin { z-index:30; }
+#status  { z-index:20; }
+#config  { z-index:40; }
+/* Minimised is ImGui's own collapse: the window stays exactly where it is and shrinks to
+   its title bar. It does not vanish, and nothing is clipped — the body is removed from
+   layout rather than cropped. */
+[data-min="1"] #mainWin .emm-body,
+[data-min="1"] #mainWin .content-foot { display:none; }
+[data-min="1"] #mainWin { height:auto !important; }
+.title-count {
+  background:var(--accent); color:#20180a; border-radius:9px; white-space:nowrap; flex:0 0 auto;
+  font-size:10.5px; font-weight:700; padding:0 7px; line-height:16px;
+}
+[data-min="1"] #btnExpand, [data-min="1"] #btnSize { display:none; }
+/* Resize grip: EMM is a free ImGui window, so a larger screen buys a larger window. */
+.grip {
+  position:absolute; right:0; bottom:0; width:14px; height:14px; cursor:nwse-resize;
+  background:linear-gradient(135deg, transparent 50%, var(--border) 50%, var(--border) 62%,
+             transparent 62%, transparent 74%, var(--border) 74%, var(--border) 86%, transparent 86%);
+}
+.emm-title {
+  display:flex; align-items:center; gap:9px; padding:7px 10px;
+  background:var(--bg-dark); border-bottom:1px solid var(--border);
+  cursor:default; flex:0 0 auto;
+}
+/* The plugin mark is a bell carrying a price series — the approved icon in miniature.
+   It used to be a gold square with a dark bar through it, which read as a minus BUTTON
+   and invited a dead click. A logo must not look like a control. */
+.emm-title .mark {
+  width:18px; height:18px; border-radius:4px; flex:0 0 auto; cursor:default;
+  background:#0e1726; border:1px solid #2b3550;
+  display:flex; align-items:center; justify-content:center;
+}
+.emm-title .mark svg { width:13px; height:13px; display:block; }
+.emm-title h1 {
+  font-size:12.5px; font-weight:600; margin:0; letter-spacing:.01em;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.emm-title .spacer { flex:1; }
+.emm-title .dock-note { font-size:10.5px; color:var(--ink-3); }
+.win-btn {
+  background:none; border:0; color:var(--ink-3); padding:2px 5px; border-radius:4px; line-height:1;
+}
+.win-btn:hover { background:var(--card-2); color:var(--ink); }
+
+/* Expanding is the main move out of the compact strip, so it is a labelled button in the
+   accent colour, not another grey glyph in a row of window controls. */
+#btnExpand {
+  display:flex; align-items:center; gap:5px; padding:2px 9px; border-radius:5px;
+  background:var(--accent-soft); border:1px solid var(--accent); color:var(--accent);
+  font-size:11.5px; font-weight:600; line-height:1.35;
+}
+#btnExpand:hover { background:var(--accent); color:#20180a; }
+#btnExpand[hidden] { display:none; }
+#btnExpand.is-open {
+  background:none; border-color:transparent; color:var(--ink-3); font-weight:400; padding:2px 6px;
+}
+#btnExpand.is-open:hover { background:var(--card-2); color:var(--ink); }
+
+.emm-body { flex:1; display:flex; min-height:0; }
+
+/* --- nav: rail mode ------------------------------------------------------ */
+.rail {
+  flex:0 0 auto; width:146px; background:var(--bg-dark);
+  border-right:1px solid var(--border); display:flex; flex-direction:column;
+  transition:width .16s ease;
+}
+[data-collapsed="1"] .rail { width:46px; }
+.rail .nav-head {
+  font-size:9.5px; letter-spacing:.15em; text-transform:uppercase; color:var(--ink-3);
+  padding:11px 12px 5px;
+}
+[data-collapsed="1"] .rail .nav-head { visibility:hidden; height:26px; }
+.nav-item {
+  display:flex; align-items:center; gap:9px; width:100%;
+  background:none; border:0; padding:7px 12px; text-align:left; color:var(--ink-2);
+  border-left:2px solid transparent; white-space:nowrap;
+}
+.nav-item:hover { background:var(--bg-light); color:var(--ink); }
+.nav-item[aria-selected="true"] {
+  background:var(--accent-soft); color:var(--ink); border-left-color:var(--accent);
+}
+.nav-item svg { flex:0 0 auto; width:15px; height:15px; }
+[data-collapsed="1"] .nav-item span { display:none; }
+.nav-item .badge {
+  margin-left:auto; background:var(--accent); color:#20180a; border-radius:9px;
+  font-size:10px; font-weight:700; padding:0 6px; line-height:15px;
+}
+[data-collapsed="1"] .nav-item .badge {
+  margin:0; position:absolute; transform:translate(11px,-8px); padding:0 4px; font-size:9px;
+}
+[data-collapsed="1"] .nav-item { position:relative; justify-content:center; padding:8px 0; }
+.rail .rail-foot { margin-top:auto; padding:7px; border-top:1px solid var(--border); }
+.collapse-btn {
+  width:100%; background:none; border:0; color:var(--ink-3); padding:5px; border-radius:4px; text-align:center;
+}
+.collapse-btn:hover { background:var(--bg-light); color:var(--ink); }
+
+/* --- content ------------------------------------------------------------- */
+.content { flex:1; display:flex; flex-direction:column; min-width:0; min-height:0; position:relative; }
+.content-head {
+  flex:0 0 auto; padding:9px 12px; border-bottom:1px solid var(--border); background:var(--bg-mid);
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+}
+.crumb { display:flex; align-items:center; gap:5px; font-size:12px; color:var(--ink-2); }
+.crumb b { color:var(--ink); font-weight:600; }
+.crumb .sep { color:var(--ink-3); }
+.crumb select {
+  background:var(--card); border:1px solid var(--border); color:var(--ink);
+  border-radius:5px; padding:3px 6px; font-size:12px;
+}
+.search {
+  margin-left:auto; display:flex; align-items:center; gap:6px;
+  background:var(--card); border:1px solid var(--border); border-radius:5px; padding:3px 8px;
+}
+.search input {
+  background:none; border:0; color:var(--ink); outline:none; width:150px; font:inherit; padding:0;
+}
+.search svg { width:12px; height:12px; color:var(--ink-3); }
+
+/* One row, never wrapping: the strip is a filter, and a filter that reflows the page
+   under it is worse than one that scrolls. It is hidden entirely on the Sell Space tab,
+   which already lists the Retainers down the left. */
+.retainer-strip {
+  display:flex; flex-wrap:nowrap; gap:5px; padding:7px 12px;
+  border-bottom:1px solid var(--border-2); overflow-x:auto; scrollbar-width:thin;
+}
+.rchip {
+  flex:0 0 auto; background:var(--card); border:1px solid var(--border); border-radius:6px;
+  padding:4px 8px; min-width:92px; text-align:left; white-space:nowrap;
+}
+.rchip[aria-pressed="true"] { border-color:var(--accent); background:var(--accent-soft); }
+.rchip .rn { font-size:11.5px; font-weight:600; display:block; }
+.rchip .rs { font-size:10.5px; color:var(--ink-3); display:block; }
+.rchip .cap { display:block; height:3px; background:var(--border); border-radius:2px; margin-top:5px; overflow:hidden; }
+.rchip .cap i { display:block; height:100%; background:var(--series); }
+.rchip .cap i.full { background:var(--caution); }
+
+/* Scrollbars follow the theme — the platform's default is a light bar on a dark window,
+   which reads as damage. */
+* { scrollbar-width:thin; scrollbar-color:var(--axis) transparent; }
+::-webkit-scrollbar { width:9px; height:9px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--axis); border-radius:5px; border:2px solid transparent; background-clip:content-box; }
+::-webkit-scrollbar-thumb:hover { background:var(--ink-3); background-clip:content-box; }
+
+/* A pane always ends in clear space, and says so when there is more below: the last row
+   was being sliced flush against the footer with nothing to show it scrolled. */
+.pane {
+  flex:1; overflow-y:auto; overflow-x:hidden; padding:11px 12px 22px; display:none;
+  scroll-padding-bottom:22px;
+}
+.content { position:relative; }
+.scrollcue {
+  position:absolute; left:0; right:10px; height:24px; pointer-events:none; z-index:2;
+  background:linear-gradient(transparent, var(--bg-mid)); opacity:0; transition:opacity .15s;
+}
+.scrollcue.show { opacity:1; }
+
+/* Docked and unexpanded, EMM is the height of the retainer list — which is short. It
+   becomes a summary strip rather than a cramped workspace: no rail, no header, the top
+   few Proposals and the two buttons that matter. */
+[data-compact="1"] .rail,
+[data-compact="1"] .content-head,
+[data-setup="1"] .content-head { display:none; }
+[data-compact="1"] .pane { padding:7px 9px; }
+[data-compact="1"] .emm-title .dock-note { display:none; }
+.crow {
+  display:grid; grid-template-columns:52px minmax(0,1fr) auto; gap:8px; align-items:center;
+  padding:4px 5px; border-radius:4px; font-size:11.5px;
+}
+.crow:hover { background:var(--card-2); }
+.crow b { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chead {
+  display:flex; align-items:center; gap:8px; padding:0 5px 6px;
+  border-bottom:1px solid var(--border-2); margin-bottom:5px;
+}
+.chead .n { font-size:13px; font-weight:600; }
+.pane.on { display:block; }
+
+.content-foot {
+  flex:0 0 auto; display:flex; align-items:center; gap:10px;
+  padding:6px 12px; border-top:1px solid var(--border); background:var(--bg-dark);
+  font-size:11px; color:var(--ink-2); white-space:nowrap; overflow:hidden;
+}
+.content-foot code {
+  font-family:Consolas,monospace; font-size:11px; color:var(--ink-2);
+  background:var(--card); border:1px solid var(--border-2); border-radius:4px; padding:1px 6px;
+}
+
+/* --- shared bits --------------------------------------------------------- */
+.sect { font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); margin:2px 0 7px; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:6px; }
+.pill { display:inline-block; border-radius:9px; font-size:10px; font-weight:700; padding:1px 6px; letter-spacing:.02em; }
+.pill.nq { background:rgba(74,144,226,0.16); color:var(--nq); }
+.pill.hq { background:rgba(224,122,60,0.16); color:var(--hq); }
+.sev { display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:600; }
+.sev::before { content:""; width:7px; height:7px; border-radius:50%; background:currentColor; }
+.sev.ok { color:var(--ok); } .sev.caution { color:var(--caution); }
+.sev.warning { color:var(--warning); } .sev.severe { color:var(--severe); }
+.act {
+  display:inline-block; min-width:60px; text-align:center; border-radius:4px;
+  font-size:10.5px; font-weight:700; padding:2px 6px; letter-spacing:.03em;
+}
+.act.List { background:rgba(30,179,127,0.16); color:var(--series); }
+.act.Reprice { background:rgba(74,144,226,0.16); color:var(--nq); }
+.act.Relist { background:rgba(224,182,74,0.16); color:var(--accent); }
+.act.Delist { background:rgba(214,84,79,0.16); color:var(--severe); }
+.act.Hold { background:var(--card-2); color:var(--ink-3); }
+.btn {
+  background:var(--card-2); border:1px solid var(--border); border-radius:5px;
+  padding:4px 10px; font-size:12px;
+}
+.btn:hover { border-color:var(--accent-dim); }
+.btn.primary { background:var(--accent); border-color:var(--accent); color:#20180a; font-weight:600; }
+.btn.primary:hover { filter:brightness(1.07); }
+.btn.ghost { background:none; color:var(--ink-3); }
+.btn.ghost:hover { color:var(--ink); }
+.muted { color:var(--ink-3); }
+.warnbox {
+  display:flex; gap:8px; border-radius:5px; padding:7px 9px; font-size:11.5px; line-height:1.4;
+  background:rgba(232,179,57,0.10); border:1px solid rgba(232,179,57,0.35); color:var(--ink-2);
+}
+.warnbox.severe { background:rgba(214,84,79,0.10); border-color:rgba(214,84,79,0.40); }
+.warnbox .ic { color:var(--caution); flex:0 0 auto; font-weight:700; }
+.warnbox.severe .ic { color:var(--severe); }
+.unapproved {
+  font-size:9.5px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--severe); border:1px dashed var(--severe); border-radius:3px; padding:0 4px; margin-left:6px;
+}
+
+/* --- the work queue ------------------------------------------------------ */
+.queue-head { display:flex; align-items:center; gap:9px; margin-bottom:9px; flex-wrap:wrap; }
+.queue-head .count { font-size:15px; font-weight:600; }
+.qrow {
+  display:grid; align-items:center; gap:9px;
+  grid-template-columns:18px 58px minmax(90px,1.4fr) 78px 108px 68px 52px 24px;
+  padding:7px 8px; border-bottom:1px solid var(--border-2); font-size:12px;
+}
+.qrow:hover { background:var(--card-2); }
+.qrow.head {
+  font-size:9.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-3);
+  border-bottom:1px solid var(--border); padding-bottom:5px;
+}
+.qrow .wname { display:flex; align-items:center; gap:6px; min-width:0; }
+.qrow .wname b { font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.qrow .price { display:flex; align-items:center; gap:5px; }
+.qrow .price .old { color:var(--ink-3); text-decoration:line-through; font-size:11px; }
+.qrow .price .arr { color:var(--ink-3); }
+.qrow .price .new { color:var(--series); font-weight:600; }
+.qrow .why { grid-column:3 / -1; font-size:11px; color:var(--ink-3); margin-top:2px; }
+.qrow .sy { text-align:right; }
+.qrow .dos { text-align:right; color:var(--ink-2); }
+.qrow input[type=checkbox] { accent-color:var(--accent); }
+.qrow .zoom { background:none; border:0; color:var(--ink-3); padding:2px; border-radius:4px; }
+.qrow .zoom:hover { color:var(--accent); background:var(--card-2); }
+/* Dense layouts have to survive a narrow window — docked, EMM gets under 700px, and a
+   grid that only works at 1000 is a grid that only works in a screenshot. Columns are
+   dropped in order of how little they are missed, never allowed to overflow. */
+[data-narrow="1"] .qrow {
+  grid-template-columns:18px 54px minmax(80px,1.4fr) 96px 60px 24px;
+}
+[data-narrow="1"] .qrow .col-ret,
+[data-narrow="1"] .qrow .col-dos { display:none; }
+/* Shed the struck-through old Unit Price before letting the column collide with
+   Slot Yield — the number you are moving TO is the one that matters. */
+[data-narrow="1"] .qrow .price .old,
+[data-narrow="1"] .qrow .price .arr { display:none; }
+[data-narrow="1"] .qrow .price { justify-content:flex-end; min-width:0; }
+[data-narrow="1"] .qrow .why { grid-column:3 / -1; }
+[data-narrow="1"] .space { grid-template-columns:minmax(0,1fr); }
+/* Narrow, the Ware list becomes a single scrolling row above the chart. It must never
+   be the thing that gets dropped: with it gone there is no way to change Ware at all. */
+[data-narrow="1"] .pricing { grid-template-columns:minmax(0,1fr); grid-template-rows:auto minmax(0,1fr); }
+[data-narrow="1"] .warecol { min-height:0; }
+[data-narrow="1"] .warelist {
+  flex:0 0 auto; min-height:0; display:flex; flex-wrap:nowrap; gap:5px;
+  overflow-x:auto; overflow-y:hidden; padding:0 0 8px;
+  border-right:0; border-bottom:1px solid var(--border-2);
+}
+[data-narrow="1"] .warelist .wrow {
+  flex:0 0 auto; width:auto; border:1px solid var(--border); border-radius:6px; padding:4px 9px;
+}
+[data-narrow="1"] .warelist .wrow[aria-current="true"] { border-color:var(--accent); background:var(--accent-soft); }
+[data-narrow="1"] .warelist .wn { max-width:120px; }
+[data-narrow="1"] .warelist canvas, [data-narrow="1"] .warelist .wsub { display:none; }
+[data-narrow="1"] .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); }
+[data-mid="1"] .space { grid-template-columns:200px minmax(0,1fr); }
+
+.holdblock { margin-top:14px; }
+.holdblock summary { cursor:pointer; color:var(--ink-2); font-size:12px; padding:5px 0; }
+
+/* --- pricing tab: the flip card ------------------------------------------ */
+.pricing { display:grid; grid-template-columns:222px minmax(0,1fr); gap:11px; height:100%; min-height:390px; }
+.warecol { display:flex; flex-direction:column; min-height:0; min-width:0; }
+.warelist {
+  flex:1; min-height:110px; overflow-y:auto; overflow-x:hidden;
+  border-right:1px solid var(--border-2); padding-right:6px;
+}
+.wrow {
+  display:flex; align-items:center; gap:7px; width:100%; background:none; border:0;
+  padding:6px 7px; border-radius:5px; text-align:left; color:inherit;
+}
+.wrow:hover, .wrow[aria-current="true"] { background:var(--card-2); }
+.wrow .wn { flex:1; min-width:0; font-size:11.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wrow canvas { width:44px; height:16px; flex:0 0 auto; }
+.wsub {
+  font-size:10.5px; color:var(--ink-3); padding:0 7px 5px 30px; margin-top:-3px;
+  border-bottom:1px solid var(--border-2); margin-bottom:3px;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.shelfline {
+  display:flex; align-items:center; gap:7px; font-size:11.5px; margin-bottom:7px;
+  background:var(--card-2); border:1px solid var(--border-2); border-radius:5px; padding:5px 9px;
+}
+
+.flip { perspective:1400px; min-height:360px; }
+.flip-inner {
+  position:relative; width:100%; height:100%; min-height:360px;
+  transform-style:preserve-3d; transition:transform .34s cubic-bezier(.4,0,.2,1);
+}
+.flip.flipped .flip-inner { transform:rotateY(180deg); }
+.face {
+  position:absolute; inset:0; backface-visibility:hidden;
+  display:flex; flex-direction:column; gap:9px;
+}
+.face.back { transform:rotateY(180deg); }
+
+.kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.kpi { background:var(--card); border:1px solid var(--border); border-radius:6px; padding:8px 10px; }
+.kpi .k { font-size:9.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-3); }
+.kpi .v { font-size:17px; font-weight:600; margin-top:2px; }
+.kpi .n { font-size:10.5px; color:var(--ink-3); }
+
+.chartwrap { background:var(--card); border:1px solid var(--border); border-radius:6px; padding:9px 10px; flex:1; display:flex; flex-direction:column; min-height:0; }
+.chart-head { display:flex; align-items:baseline; gap:9px; flex-wrap:wrap; margin-bottom:6px; }
+.chart-head h3 { margin:0; font-size:13.5px; font-weight:600; }
+.chart-head .est { margin-left:auto; font-size:19px; font-weight:600; }
+.chart-head .est small { font-size:11px; color:var(--ink-3); font-weight:400; }
+canvas.big { width:100%; flex:1; min-height:190px; display:block; }
+.legend { display:flex; gap:13px; flex-wrap:wrap; font-size:10.5px; color:var(--ink-3); margin-top:6px; }
+.legend i { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:4px; vertical-align:-1px; }
+.statgrid { display:grid; grid-template-columns:repeat(auto-fill,minmax(126px,1fr)); gap:5px 14px; font-size:11.5px; }
+.statgrid div { display:flex; justify-content:space-between; gap:8px; border-bottom:1px dotted var(--border-2); padding:2px 0; }
+.statgrid span:first-child { color:var(--ink-3); }
+
+/* --- item icon tiles ------------------------------------------------------
+   Stand-ins for the game's own item icons. The point is that an inventory grid
+   reads by icon, not by text — the real build takes the icon id off the Item row. */
+.itile {
+  position:relative; aspect-ratio:1; border-radius:4px; padding:0;
+  display:flex; align-items:center; justify-content:center; font-size:15px; line-height:1;
+  border:1px solid rgba(150,165,195,0.22); background:rgba(150,165,195,0.07);
+  color:#fff; text-shadow:0 1px 2px rgba(0,0,0,0.6);
+}
+.itile.empty { background:transparent; border-style:dashed; border-color:var(--border); }
+.itile .gl { filter:brightness(1.7); }
+.itile .hq { position:absolute; top:0; left:2px; font-size:8px; color:#ffd98a; }
+.itile .qty {
+  position:absolute; bottom:-1px; right:2px; font-size:8.5px; font-weight:700;
+  color:#fff; text-shadow:0 1px 2px #000;
+}
+[data-theme="light"] .itile { text-shadow:none; }
+[data-theme="light"] .itile .gl { filter:brightness(0.72) saturate(1.3); }
+[data-theme="light"] .itile .hq { color:#9a6f12; }
+[data-theme="light"] .itile .qty { color:#1b2230; text-shadow:0 1px 2px #fff, 0 0 3px #fff; }
+.itile.granted { box-shadow:inset 0 0 0 2px rgba(30,179,127,0.75); }
+.itile.listed::after {
+  content:""; position:absolute; top:2px; right:2px; width:5px; height:5px;
+  border-radius:50%; background:var(--accent);
+}
+.itile:hover { outline:1px solid var(--accent-dim); }
+
+/* --- retainer inventory pages -------------------------------------------- */
+.pagetabs { display:flex; gap:3px; margin-bottom:7px; flex-wrap:wrap; }
+.pagetab {
+  background:var(--card-2); border:1px solid var(--border); border-radius:4px;
+  padding:2px 8px; font-size:11px; color:var(--ink-2); min-width:30px;
+}
+.pagetab[aria-pressed="true"] { border-color:var(--accent); background:var(--accent-soft); color:var(--ink); }
+.pagetab .mk { display:block; font-size:8.5px; color:var(--series); }
+.invgrid { display:grid; grid-template-columns:repeat(5,1fr); gap:5px; max-width:276px; }
+
+/* --- sell space ---------------------------------------------------------- */
+.space { display:grid; grid-template-columns:214px 288px minmax(0,1fr); gap:16px; align-items:start; }
+.boardstrip { display:grid; grid-template-columns:repeat(10,1fr); gap:5px; max-width:380px; }
+.slot {
+  aspect-ratio:1; border-radius:4px; border:1px solid var(--border);
+  background:var(--card-2); display:flex; align-items:center; justify-content:center;
+  font-size:9.5px; color:var(--ink-3); padding:0; position:relative;
+}
+.slot.filled { background:rgba(224,182,74,0.16); border-color:var(--accent-dim); color:var(--accent); }
+.slot.pending { box-shadow:inset 0 0 0 2px var(--accent); }
+.legend-row { display:flex; gap:14px; font-size:11px; color:var(--ink-3); margin-top:8px; flex-wrap:wrap; }
+.legend-row b { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px; }
+
+/* --- tables (holdings, ledger) ------------------------------------------- */
+table.t { width:100%; border-collapse:collapse; font-size:12px; }
+table.t th {
+  text-align:left; font-size:9.5px; letter-spacing:.11em; text-transform:uppercase;
+  color:var(--ink-3); font-weight:600; padding:5px 8px; border-bottom:1px solid var(--border);
+}
+table.t td { padding:6px 8px; border-bottom:1px solid var(--border-2); }
+table.t tbody tr:hover { background:var(--card-2); }
+table.t td.r, table.t th.r { text-align:right; }
+
+/* --- status window ------------------------------------------------------- */
+#status.emm { width:274px; }
+.status-body { padding:9px 11px; display:flex; flex-direction:column; gap:7px; }
+.status-line { display:flex; align-items:center; gap:8px; font-size:11.5px; }
+.dot { width:8px; height:8px; border-radius:50%; flex:0 0 auto; }
+.bar { height:4px; background:var(--border); border-radius:2px; overflow:hidden; }
+.bar i { display:block; height:100%; background:var(--accent); }
+
+/* --- item overlay -------------------------------------------------------- */
+
+/* --- config window ------------------------------------------------------- */
+#config.emm { width:912px; height:600px; }
+#pane-cfg table.t td, #pane-cfg table.t th { padding:4px 7px; }
+#pane-cfg table.t .btn { padding:2px 6px; font-size:11.5px; }
+.cfg-row { display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--border-2); }
+.cfg-row .lbl { flex:1; }
+.cfg-row .lbl b { display:block; font-size:12.5px; font-weight:600; }
+.cfg-row .lbl span { font-size:11px; color:var(--ink-3); }
+.sw { width:34px; height:18px; border-radius:10px; background:var(--border); border:0; position:relative; flex:0 0 auto; }
+.sw::after { content:""; position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:var(--ink-3); transition:.14s; }
+.sw[aria-pressed="true"] { background:var(--series-dim); }
+.sw[aria-pressed="true"]::after { left:18px; background:var(--series); }
+.expr {
+  display:block; font-family:Consolas,monospace; font-size:11.5px; background:var(--bg-dark);
+  border:1px solid var(--border); border-radius:5px; padding:7px 9px; color:var(--accent);
+}
+
+/* Toasts belong to Dalamud, not to EMM, so they keep the game's own dark chrome in both
+   themes rather than following EMM's palette. Severity surfaces here rather than as an
+   inline box — and only when EMM ACTS on a figure the data does not back. */
+#toasts {
+  position:absolute; bottom:18px; right:18px; z-index:60; width:288px;
+  display:flex; flex-direction:column; gap:7px;
+}
+.toast {
+  background:rgba(13,19,32,0.96); border:1px solid #2b3852; border-left:3px solid var(--tone);
+  border-radius:5px; padding:9px 11px; font-size:11.5px; box-shadow:var(--shadow);
+  color:#c2cbdb;
+}
+.toast b { display:block; font-size:12px; margin-bottom:2px; color:#eef1f6; }
+.toast .unapproved { color:#e2726c; border-color:#e2726c; }
+
+/* --- first-run on-ramp --------------------------------------------------- */
+.onramp { display:flex; flex-direction:column; gap:10px; }
+.onramp .lede { font-size:13px; color:var(--ink-2); }
+.finding { display:flex; gap:10px; align-items:flex-start; padding:10px 11px; }
+.finding .n { font-size:21px; font-weight:600; color:var(--accent); line-height:1; min-width:52px; }
+.finding .t b { display:block; font-size:12.5px; }
+.finding .t span { font-size:11.5px; color:var(--ink-3); }
+.setup { display:flex; gap:9px; align-items:center; flex-wrap:wrap; }
+.wiz { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px; }
+.wstep {
+  display:inline-flex; align-items:center; gap:6px; font-size:11.5px; color:var(--ink-3);
+  border:1px solid var(--border); border-radius:14px; padding:3px 11px 3px 4px;
+}
+.wstep b {
+  width:17px; height:17px; border-radius:50%; background:var(--card-2); color:var(--ink-3);
+  display:inline-flex; align-items:center; justify-content:center; font-size:10px;
+}
+.wstep.on { color:var(--ink); border-color:var(--accent); background:var(--accent-soft); }
+.wstep.on b { background:var(--accent); color:#20180a; }
+.wstep.done b { background:var(--series); color:#04120c; }
+.wsep { color:var(--ink-3); }
+
+/* --- sell-space authoring overlay on the Retainer's own window ---------- */
+.drawn {
+  position:absolute; border:2px solid var(--series); background:rgba(30,179,127,0.16);
+  border-radius:3px; pointer-events:none;
+}
+.drawn::after {
+  content:attr(data-label); position:absolute; top:-9px; left:6px;
+  background:var(--series); color:#04120c; font-size:9px; font-weight:700;
+  padding:0 5px; border-radius:2px; letter-spacing:.04em;
+}
+.cursor-hint {
+  position:absolute; font-size:10.5px; color:var(--series); background:rgba(13,19,32,0.9);
+  border:1px solid var(--series); border-radius:3px; padding:2px 6px; pointer-events:none;
+}
+.callout {
+  position:absolute; max-width:250px; background:rgba(13,19,32,0.95);
+  border:1px solid var(--border); border-left:3px solid var(--accent);
+  border-radius:5px; padding:8px 10px; font-size:11.5px; color:var(--ink-2); box-shadow:var(--shadow);
+}
+.callout > b:first-child { color:var(--ink); display:block; margin-bottom:3px; font-size:12px; }
+.callout strong { color:var(--ink); }
+</style>
+</head>
+<body>
+
+<div id="proto">
+  <span class="tag">Prototype controls — not part of EMM</span>
+  <span><label>Scene</label>
+    <select id="sceneSel">
+      <option value="bell">1 · Docked at the summoning bell</option>
+      <option value="float">2 · Free-floating main window</option>
+      <option value="firstrun">3 · First open, nothing configured</option>
+      <option value="space">4 · Drawing a sell space on a Retainer</option>
+      <option value="config">5 · Config window</option>
+    </select></span>
+  <span><label>Theme</label>
+    <span class="seg" id="themeSeg">
+      <button data-theme="dark" aria-pressed="true">Dark</button>
+      <button data-theme="light" aria-pressed="false">Light</button>
+    </span></span>
+  <span><label>Status window</label>
+    <span class="seg" id="statusSeg">
+      <button data-status="1" aria-pressed="true">On</button>
+      <button data-status="0" aria-pressed="false">Off</button>
+    </span></span>
+</div>
+
+<div id="stage" data-nav="rail" data-collapsed="0">
+
+  <!-- The only toast EMM raises: it acted on a Ware the data does not back. -->
+  <div id="toasts">
+    <div class="toast" id="toast-sev" hidden style="--tone:#e8b339">
+      <b>Listed on a provisional Estimate</b>
+      Crested Hood of Gathering · no Sales on this World in the window, so the figure came from
+      the live book — asks, not Sales.
+      <span class="unapproved">copy not approved</span>
+    </div>
+  </div>
+
+  <!-- ============ SCENE 1/2/3: the main window ========================== -->
+  <div class="scene on" id="sc-main">
+
+    <!-- the game's own summoning-bell list, for the docking relationship -->
+    <div class="game-win" id="bellWin" style="left:64px; top:104px; width:296px;">
+      <div class="gw-title">Retainer</div>
+      <div class="gw-body" id="bellRows"></div>
+    </div>
+
+    <div class="emm" id="mainWin">
+      <div class="emm-title">
+        <span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2.4a3.3 3.3 0 0 0-3.3 3.3c0 2.5-1 3.5-1 3.5h8.6s-1-1-1-3.5A3.3 3.3 0 0 0 8 2.4z" fill="#e0b64a"/><path d="M6.7 10.4a1.4 1.4 0 0 0 2.6 0" stroke="#e0b64a" stroke-width="1.1" stroke-linecap="round"/><path d="M2.6 13.4l2.4-1.3 2.4.9 2.4-1.6 2.4.7" stroke="#1eb37f" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <h1>Eorzean Market Master</h1>
+        <span class="title-count" id="titleCount" hidden></span>
+        <span class="dock-note" id="dockNote">docked · right of Retainer</span>
+        <span class="spacer"></span>
+        <button class="win-btn" id="btnExpand" title="Expand beyond the retainer list">⤢</button>
+        <button class="win-btn" id="btnSize" title="Window size">▭</button>
+        <button class="win-btn" id="btnMin" title="Minimise to the summary strip">—</button>
+        <button class="win-btn" id="btnConfig" title="Settings">⚙</button>
+        <button class="win-btn" id="btnClose" title="Close — the status strip stays">✕</button>
+      </div>
+
+      <div class="emm-body">
+        <nav class="rail">
+          <div class="nav-head">Workspace</div>
+          <div id="railItems"></div>
+          <div class="rail-foot">
+            <button class="collapse-btn" id="btnCollapse" title="Collapse">‹‹</button>
+          </div>
+        </nav>
+
+        <div class="content">
+          <div class="content-head">
+            <div class="crumb">
+              <b>Player</b><span class="sep">▸</span>
+              <select id="scopeSel">
+                <option value="*">All Characters (2) · 6 Retainers</option>
+                <option value="Sable Ashgrove">Sable Ashgrove · 4 Retainers</option>
+                <option value="Wren Halloway">Wren Halloway · 2 Retainers</option>
+              </select>
+            </div>
+            <span class="muted" id="freshness"></span>
+            <div class="search">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.4"/><path d="M10.4 10.4 14 14"/></svg>
+              <input id="globalSearch" placeholder="Search a Ware…">
+            </div>
+          </div>
+
+          <div class="retainer-strip" id="rstrip"></div>
+
+          <div class="pane on" id="pane-tasks"></div>
+          <div class="pane" id="pane-pricing"></div>
+          <div class="pane" id="pane-space"></div>
+          <div class="pane" id="pane-holdings"></div>
+          <div class="pane" id="pane-strategies"></div>
+          <div class="pane" id="pane-scan"></div>
+          <div class="scrollcue" id="scrollCue"></div>
+
+          <div class="content-foot">
+            <span class="dot" style="background:var(--series)"></span>
+            <code id="footLog">[EMM] Bloodstained: 2 Sold, 4 Updated, 1 Newly Listed, 2 Hold (4 spaces free)</code>
+            <span class="spacer" style="flex:1"></span>
+            <span id="mandateNote" class="muted">Mandates: Reprice ✓ · List ✓ · Relist ✓ · Buy ✗</span>
+          </div>
+        </div>
+      </div>
+      <div class="grip" id="mainGrip" title="Drag to resize"></div>
+    </div>
+
+    <!-- the compact status window, toggled from the main window ---------- -->
+    <div class="emm" id="status" style="left:64px; top:700px;">
+      <div class="emm-title">
+        <span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2.4a3.3 3.3 0 0 0-3.3 3.3c0 2.5-1 3.5-1 3.5h8.6s-1-1-1-3.5A3.3 3.3 0 0 0 8 2.4z" fill="#e0b64a"/><path d="M6.7 10.4a1.4 1.4 0 0 0 2.6 0" stroke="#e0b64a" stroke-width="1.1" stroke-linecap="round"/><path d="M2.6 13.4l2.4-1.3 2.4.9 2.4-1.6 2.4.7" stroke="#1eb37f" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h1>EMM Status</h1>
+        <span class="spacer"></span>
+        <button class="win-btn" id="btnStatusOpen" title="Open the main window">▣</button>
+        <button class="win-btn" id="btnStatusHide" title="Hide the status strip">—</button>
+      </div>
+      <div class="status-body">
+        <div class="status-line"><span class="dot" style="background:var(--series)"></span>
+          <span>Working <b>Bloodstained</b> — 3 of 7 acts</span></div>
+        <div class="bar"><i style="width:43%"></i></div>
+        <div class="status-line muted"><span class="dot" style="background:var(--accent)"></span>
+          <span>Window closes in 11s (hard ceiling)</span></div>
+        <div class="status-line muted"><span class="dot" style="background:var(--nq)"></span>
+          <span>Next sweep 21:47 · Cactuar</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SCENE 4: drawing a sell space ========================== -->
+  <div class="scene" id="sc-space">
+    <!-- what is actually being marked: the Retainer's own stock, page by page -->
+    <div class="game-win" style="left:56px; top:74px; width:300px;">
+      <div class="gw-title">Bloodstained — Inventory</div>
+      <div class="gw-body" style="padding:10px;">
+        <div id="gamePages" style="display:flex;gap:4px;margin-bottom:8px;"></div>
+        <div id="invGrid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:5px;"></div>
+      </div>
+    </div>
+    <div class="drawn" style="left:62px; top:142px; width:288px; height:169px;" data-label="SELL SPACE — 15 of 25 on page 1"></div>
+    <div class="cursor-hint" style="left:356px; top:302px;">drag to mark ⤡</div>
+
+    <!-- related, and shown alongside because it is the consequence -->
+    <div class="game-win" style="left:388px; top:74px; width:326px;">
+      <div class="gw-title">Bloodstained — Sell Items <span style="color:#98a3b8">(20 postings)</span></div>
+      <div class="gw-body" id="sellRows"></div>
+    </div>
+
+    <div class="callout" style="left:746px; top:74px;">
+      <b>The sell space is the Retainer's stock</b>
+      The Player drags a box over the Retainer's own inventory. Marked slots turn green and
+      EMM may sell what sits in them. Unmarked slots are outside its reach entirely.
+    </div>
+    <div class="callout" style="left:746px; top:196px;">
+      <b>The board is the consequence, not the space</b>
+      The sell list beside it is what the allocation produced — EMM picks which of the granted
+      stock takes the 20 postings, most revenue first. It is shown here because it is related,
+      never because it is the thing being marked.
+    </div>
+    <div class="callout" style="left:746px; top:344px;">
+      <b>Retainers have seven pages</b>
+      The space is marked per page and totals across them, so a Retainer whose stock is spread
+      does not have to be tidied first.
+    </div>
+    <div class="callout" style="left:746px; top:452px;">
+      <b>Three ways to mark, all of them supported</b>
+      <span style="display:block;margin-top:3px">
+        <b style="color:var(--ink)">Click</b> one slot to toggle it ·
+        <b style="color:var(--ink)">Shift-click</b> to take everything between this slot and the
+        last one ·
+        <b style="color:var(--ink)">Drag</b> a box over any run of them.
+      </span>
+      Marking is per page and totals across all seven.
+    </div>
+    <div class="callout" style="left:746px; top:566px;">
+      <b>Slot count drives the Strategy</b>
+      Not just capacity. Many slots reads as a commodity and assigns accordingly; one slot reads
+      as a single sale. The assignment follows what is entering and available, and stays
+      overridable per Ware.
+    </div>
+    <div class="callout" style="left:56px; top:470px; max-width:300px;">
+      <b>Dropping stock in is the enrolment</b>
+      Put something into a green slot and it is enrolled — the last manual chore set-and-forget
+      left standing. On backing out, the aggregate rolls up into the <strong>Sell Space</strong>
+      tab, shown on demand.
+    </div>
+  </div>
+
+  <!-- ============ SCENE 5: config ======================================== -->
+  <div class="scene" id="sc-config">
+    <div class="emm" id="config" style="left:120px; top:70px;">
+      <div class="emm-title">
+        <span class="mark" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none"><path d="M8 2.4a3.3 3.3 0 0 0-3.3 3.3c0 2.5-1 3.5-1 3.5h8.6s-1-1-1-3.5A3.3 3.3 0 0 0 8 2.4z" fill="#e0b64a"/><path d="M6.7 10.4a1.4 1.4 0 0 0 2.6 0" stroke="#e0b64a" stroke-width="1.1" stroke-linecap="round"/><path d="M2.6 13.4l2.4-1.3 2.4.9 2.4-1.6 2.4.7" stroke="#1eb37f" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><h1>Eorzean Market Master — Settings</h1>
+        <span class="dock-note">free · moveable · remembers position</span>
+        <span class="spacer"></span>
+        <button class="win-btn" title="Close">✕</button>
+      </div>
+      <div class="emm-body">
+        <nav class="rail" style="width:190px">
+          <div class="nav-head">Settings</div>
+          <div id="cfgItems"></div>
+        </nav>
+        <div class="content">
+          <div class="pane on" id="pane-cfg" style="padding:12px 14px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="data.js"></script>
+<script>
+/* Surface any script error in the tab title — headless renders swallow the console,
+   and a silent failure here cost an hour once already. */
+window.addEventListener('error', e =>
+  document.title = 'JSERR: ' + e.message + ' @line ' + e.lineno);
+
+/* ==========================================================================
+   State + helpers
+   ========================================================================== */
+const D = window.EMM_UI;
+const stage = document.getElementById('stage');
+const DAY = 86400;
+
+const wareByKey = {};
+D.wares.forEach(w => wareByKey[w.key] = w);
+
+const charOf = {};
+D.characters.forEach(c => c.retainers.forEach(r => charOf[r.name] = c.name));
+
+const state = {
+  scene: 'bell',
+  tab: 'tasks',
+  character: '*',
+  retainer: '*',
+  hovered: null,       // ware key the Pricing card is flipped to
+  expanded: false,     // docked window grown past the retainer list
+  size: 'default',     // free window: default | large | full
+  minimised: false,    // collapsed to its title bar, in place
+  faceA: true,         // which face of the Pricing card is showing
+  page: 0,             // retainer inventory page
+  setupStep: 0,        // first-run wizard
+  search: '',
+  accepted: new Set(D.proposals.filter(p => !p.hold).map(p => p.ware + '|' + p.retainer)),
+  applied: new Set(),  // Proposals the Player has pressed Apply on
+  cfg: 'general',
+  grantedSlots: null,  // sell-space authoring demo
+};
+
+const gil = n => n == null ? '—' : Math.round(n).toLocaleString('en-US');
+const gilShort = n => {
+  if (n == null) return '—';
+  if (n >= 1e6) return (n/1e6).toFixed(n >= 1e7 ? 0 : 1) + 'M';
+  if (n >= 1e4) return Math.round(n/1e3) + 'k';
+  return Math.round(n).toLocaleString('en-US');
+};
+const ageText = ts => {
+  const h = (D.asOf - ts) / 3600;
+  if (h < 1) return Math.round(h*60) + 'm ago';
+  if (h < 48) return h.toFixed(h < 10 ? 1 : 0) + 'h ago';
+  return Math.round(h/24) + 'd ago';
+};
+const qPill = w => `<span class="pill ${w.hq?'hq':'nq'}">${w.hq?'HQ':'NQ'}</span>`;
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+
+/* Strategies are named for what they are TRYING TO DO, not for a metaphor, and there
+   are more than three. A Strategy is assigned PER RETAINER — everything that Retainer
+   sells runs on it unless a Group or a single Ware overrides. `Advanced` starts blank.
+   All of these names are proposals and none is approved. */
+const STRATEGIES = [
+  {name:'Undercut to Sell Fast',
+   goal:'Turnover first — sit just under the cheapest Competing Listing, but stop at the Floor.',
+   floor:'max(costBasis * 1.15, estimate * 0.95)', ask:'minListing - 1', horizon:'3 · 7 days'},
+  {name:'Hold for a Better Price',
+   goal:'Never chase a price war down. Wait for the cheap Listings to clear, then sell.',
+   floor:'max(costBasis * 1.15, estimate * 0.80)', ask:'estimate', horizon:'60 days'},
+  {name:'Follow the Estimate',
+   goal:'Ask what the Ware is worth and let it sit. Neither chases nor waits deliberately.',
+   floor:'max(costBasis * 1.10, estimate * 0.85)', ask:'estimate', horizon:'21 days'},
+  {name:'Protect the Margin',
+   goal:'Refuse anything under your Minimum Margin, however long it takes to sell.',
+   floor:'costBasis * 1.30', ask:'max(estimate, costBasis * 1.30)', horizon:'no limit'},
+  {name:'Clear Dead Stock',
+   goal:'Free the posting. Prices to move, may go below Cost Basis, and says so every time.',
+   floor:'0', ask:'min(minListing - 1, estimate * 0.7)', horizon:'7 days'},
+  {name:'Advanced (yours)',
+   goal:'Starts blank. Write your own Floor and ask as expressions over any Value Source.',
+   floor:'—', ask:'—', horizon:'yours'},
+];
+const stratByName = {};
+STRATEGIES.forEach(s => stratByName[s.name] = s);
+
+/* The severity reason strings below stand in for #11's, which the maintainer has
+   not approved. Every one is marked in the UI as unapproved copy. */
+const SEV_NOTE = {
+  ok:      null,
+  caution: 'Estimate reached from a 90-day Sample — thinner than EMM prefers, and slower to follow a change.',
+  warning: 'No Sales on this World in the Estimate window. This figure comes from the live book, which is asks, not Sales.',
+  severe:  'No market Source could price this Ware. The figure shown is the vendor price — a floor, not a market price.',
+};
+
+/* ==========================================================================
+   Icons (inline; Dalamud ships FontAwesome, these stand in for it)
+   ========================================================================== */
+const ICON = {
+  tasks:'<path d="M2 4h3v3H2zM2 10.5h3v3H2z"/><path d="M7 5.5h8M7 12h8" stroke-linecap="round"/>',
+  pricing:'<path d="M2 13.5 6 8.5l3 2.6 5-7" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M11 4h3.4v3.4" fill="none" stroke-linecap="round"/>',
+  space:'<rect x="2" y="2.5" width="5" height="5" rx="1" fill="none"/><rect x="9" y="2.5" width="5" height="5" rx="1" fill="none"/><rect x="2" y="9.5" width="5" height="5" rx="1"/><rect x="9" y="9.5" width="5" height="5" rx="1" fill="none"/>',
+  holdings:'<path d="M8 1.8 14.2 5v6L8 14.2 1.8 11V5z" fill="none" stroke-linejoin="round"/><path d="M1.8 5 8 8.2 14.2 5M8 8.2v6" fill="none"/>',
+  ledger:'<path d="M3 2.5h8a1.5 1.5 0 0 1 1.5 1.5v9.5H4.5A1.5 1.5 0 0 1 3 12z" fill="none"/><path d="M5.5 5.5h5M5.5 8h5M5.5 10.5h3" stroke-linecap="round"/>',
+  strategies:'<path d="M3 4h10M3 8h10M3 12h10" stroke-linecap="round"/><circle cx="6" cy="4" r="1.7" fill="none"/><circle cx="10.5" cy="8" r="1.7" fill="none"/><circle cx="5" cy="12" r="1.7" fill="none"/>',
+  scan:'<rect x="1.6" y="5.6" width="12.8" height="4.8" rx="2.4" fill="none" stroke-width="1.3"/><rect x="3.2" y="7.2" width="6" height="1.6" rx="0.8" stroke="none"/>',
+  cog:'<circle cx="8" cy="8" r="2.4" fill="none"/><path d="M8 1.6v2M8 12.4v2M1.6 8h2M12.4 8h2M3.5 3.5l1.4 1.4M11.1 11.1l1.4 1.4M12.5 3.5l-1.4 1.4M4.9 11.1 3.5 12.5" stroke-linecap="round"/>',
+  data:'<ellipse cx="8" cy="4" rx="5.4" ry="2.2" fill="none"/><path d="M2.6 4v8c0 1.2 2.4 2.2 5.4 2.2s5.4-1 5.4-2.2V4" fill="none"/><path d="M2.6 8c0 1.2 2.4 2.2 5.4 2.2s5.4-1 5.4-2.2" fill="none"/>',
+  bell:'<path d="M8 2a4 4 0 0 0-4 4c0 3.2-1.2 4.4-1.2 4.4h10.4S12 9.2 12 6a4 4 0 0 0-4-4z" fill="none" stroke-linejoin="round"/><path d="M6.4 12.6a1.7 1.7 0 0 0 3.2 0" fill="none"/>',
+  shield:'<path d="M8 1.9 13.4 4v4.3c0 3.1-2.4 5.1-5.4 5.9-3-.8-5.4-2.8-5.4-5.9V4z" fill="none" stroke-linejoin="round"/><path d="M5.8 8.1 7.3 9.6l3-3.2" fill="none" stroke-linecap="round"/>',
+};
+const svg = k => `<svg viewBox="0 0 16 16" fill="currentColor" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round">${ICON[k]}</svg>`;
+
+/* ==========================================================================
+   Navigation
+   ========================================================================== */
+/* Ledger was removed on the maintainer's ruling — the recorder still exists behind the
+   scenes, the view over it does not earn a tab in v0.1. */
+const TABS = [
+  {id:'tasks',      label:'Tasks',      icon:'tasks',      badge:() => D.proposals.filter(p=>!p.hold).length},
+  {id:'pricing',    label:'Pricing',    icon:'pricing'},
+  {id:'space',      label:'Sell Space', icon:'space'},
+  {id:'holdings',   label:'Holdings',   icon:'holdings'},
+  {id:'strategies', label:'Strategies', icon:'strategies'},
+  {id:'scan',       label:'Scan',       icon:'scan'},
+];
+
+function renderNav() {
+  document.getElementById('railItems').innerHTML = TABS.map(t => {
+    const n = t.badge ? t.badge() : 0;
+    return `<button class="nav-item" data-tab="${t.id}" aria-selected="${state.tab===t.id}">
+      ${svg(t.icon)}<span>${t.label}</span>${n ? `<em class="badge">${n}</em>` : ''}</button>`;
+  }).join('');
+  stage.querySelectorAll('.nav-item[data-tab]').forEach(b => {
+    if (stage.dataset.setup === '1') { b.disabled = true; b.style.opacity = .45; }
+    b.onclick = () => { state.tab = b.dataset.tab; renderNav(); renderPanes(); };
+  });
+  TABS.forEach(t => document.getElementById('pane-' + t.id).classList.toggle('on', state.tab === t.id));
+}
+
+/* ==========================================================================
+   Tasks — the work queue
+   ========================================================================== */
+function visibleProposals() {
+  return D.proposals.filter(p => {
+    if (state.character !== '*' && charOf[p.retainer] !== state.character) return false;
+    if (state.retainer !== '*' && p.retainer !== state.retainer) return false;
+    if (state.search) {
+      const w = wareByKey[p.ware];
+      if (!w.name.toLowerCase().includes(state.search)) return false;
+    }
+    return true;
+  });
+}
+
+function qrow(p) {
+  const w = wareByKey[p.ware];
+  const id = p.ware + '|' + p.retainer;
+  const on = state.accepted.has(id);
+  const price = p.hold
+    ? `<span class="muted">no change</span>`
+    : `<span class="old num">${gil(p.from)}</span><span class="arr">→</span><span class="new num">${gil(p.to)}</span>`;
+  return `<div class="qrow" data-w="${p.ware}">
+    <input type="checkbox" ${on?'checked':''} ${p.hold?'disabled':''} data-acc="${esc(id)}">
+    <span class="act ${p.act}">${p.act}</span>
+    <span class="wname">${qPill(w)}<b>${esc(w.name)}</b><span class="muted num">×${p.stack}</span></span>
+    <span class="muted col-ret">${esc(p.retainer)}</span>
+    <span class="price num">${price}</span>
+    <span class="sy num" title="Slot Yield — gil per slot-day">${gilShort(p.slotYield)}<span class="muted">/sd</span></span>
+    <span class="dos col-dos num" title="Days of Supply">${p.dos == null ? '—' : p.dos.toFixed(p.dos<10?1:0) + 'd'}</span>
+    <button class="zoom" data-zoom="${p.ware}" title="Open the item overlay">▤</button>
+    ${p.reason ? `<span class="why">${esc(p.reason)}</span>` : ''}
+  </div>`;
+}
+
+/* The compact docked strip: what needs doing, and the two buttons that matter. */
+function renderCompact() {
+  const all = visibleProposals();
+  const acts = all.filter(p => !p.hold), holds = all.filter(p => p.hold);
+  const top = acts.slice(0, 4);
+  document.getElementById('pane-tasks').innerHTML = `
+    <div class="chead">
+      <span class="n num">${acts.length}</span><span class="muted">Proposals</span>
+      <span class="muted num">${holds.length} Hold</span>
+      <span style="flex:1"></span>
+      <button class="btn primary" style="padding:3px 9px">Apply ${acts.length}</button>
+    </div>
+    ${top.map(p => {
+      const w = wareByKey[p.ware];
+      return `<div class="crow" data-zoom="${p.ware}">
+        <span class="act ${p.act}" style="min-width:52px">${p.act}</span>
+        <b>${esc(w.name)}</b>
+        <span class="num"><span class="muted">${gilShort(p.from)}</span>
+          <span class="muted">→</span> <b style="color:var(--series)">${gilShort(p.to)}</b></span>
+      </div>`;
+    }).join('')}
+    <div class="muted" style="font-size:11px;padding:4px 5px 0">
+      ${Math.max(0, acts.length - top.length)} more · ${holds.length} held with reasons
+    </div>`;
+  document.getElementById('pane-tasks').querySelectorAll('[data-zoom]').forEach(r =>
+    r.onclick = () => openItem(r.dataset.zoom));
+}
+
+function renderTasks() {
+  if (state.scene === 'bell' && !state.expanded) return renderCompact();
+  const all = visibleProposals().filter(p => !state.applied.has(p.ware + '|' + p.retainer));
+  const acts = all.filter(p => !p.hold), holds = all.filter(p => p.hold);
+  const accepted = acts.filter(p => state.accepted.has(p.ware + '|' + p.retainer));
+  const gain = accepted.reduce((s,p) => s + p.slotYield, 0);
+
+  document.getElementById('pane-tasks').innerHTML = `
+    <div class="queue-head">
+      <span class="count">${acts.length} Proposals</span>
+      <span class="muted">${holds.length} Hold · ranked by Slot Yield</span>
+      <span style="flex:1"></span>
+      <button class="btn ghost" data-live="why">Why this order?</button>
+      <button class="btn primary" data-live="apply">Apply ${accepted.length}</button>
+    </div>
+    <div class="warnbox" id="whyOrder" hidden style="margin-bottom:9px"><span class="ic">i</span>
+      <span>Ranked by <b>Slot Yield</b> — <code class="expr" style="display:inline;padding:1px 5px">Stack
+      × (netProceeds − costBasis) × soldPerDay ÷ (unitsListedBelow + Stack)</code> — the gil a posting
+      is expected to earn per day. <b>Days of Supply sits beside it deliberately</b>: a high Slot Yield
+      on a 110-day supply is the formula's blind spot, not a recommendation.</span></div>
+
+    <div class="card" style="padding:0 4px 4px">
+      <div class="qrow head">
+        <span></span><span>Act</span><span>Ware</span><span class="col-ret">Retainer</span>
+        <span>Unit Price</span><span class="sy">Slot Yield</span>
+        <span class="dos col-dos">Supply</span><span></span>
+      </div>
+      ${acts.map(qrow).join('') || '<div style="padding:18px;text-align:center" class="muted">Nothing to do here.</div>'}
+    </div>
+
+    ${holds.length ? `<details class="holdblock" open>
+      <summary><b>${holds.length} Hold</b> — computed, declined, with the reason</summary>
+      <div class="card" style="padding:0 4px 4px">${holds.map(qrow).join('')}</div>
+    </details>` : ''}
+
+    <div class="sect" style="margin-top:16px">Since the last visit</div>
+    <div class="card" style="padding:9px 11px; display:flex; gap:22px; flex-wrap:wrap">
+      <span><b class="num">2</b> <span class="muted">Own Sales detected</span></span>
+      <span><b class="num">38,240</b> <span class="muted">gil Net Proceeds</span></span>
+      <span><b class="num">4</b> <span class="muted">postings freed</span></span>
+      <span><b class="num">1</b> <span class="muted">Ware fell below its Floor</span></span>
+    </div>`;
+
+  document.getElementById('pane-tasks').querySelectorAll('[data-acc]').forEach(cb =>
+    cb.onchange = () => { cb.checked ? state.accepted.add(cb.dataset.acc) : state.accepted.delete(cb.dataset.acc); renderTasks(); });
+  document.getElementById('pane-tasks').querySelectorAll('[data-zoom]').forEach(b =>
+    b.onclick = () => openItem(b.dataset.zoom));
+  document.getElementById('pane-tasks').querySelectorAll('.qrow[data-w]').forEach(r =>
+    r.onmouseenter = () => { state.hovered = r.dataset.w; });
+}
+
+/* ==========================================================================
+   Charts
+   ========================================================================== */
+function fitCanvas(cv) {
+  const dpr = window.devicePixelRatio || 1;
+  const r = cv.getBoundingClientRect();
+  cv.width = Math.max(1, Math.round(r.width * dpr));
+  cv.height = Math.max(1, Math.round(r.height * dpr));
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return {ctx, w:r.width, h:r.height};
+}
+const css = n => getComputedStyle(document.body).getPropertyValue(n).trim();
+
+function quantile(sorted, q) {
+  if (!sorted.length) return null;
+  const i = (sorted.length - 1) * q, lo = Math.floor(i), hi = Math.ceil(i);
+  return sorted[lo] + (sorted[hi] - sorted[lo]) * (i - lo);
+}
+
+/* Sparkline for a Ware list row. */
+function sparkline(cv, w) {
+  const {ctx, w:W, h:H} = fitCanvas(cv);
+  const pts = w.series.filter(s => s[1] != null);
+  if (pts.length < 2) return;
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs);
+  const y0 = Math.min(...ys), y1 = Math.max(...ys);
+  ctx.strokeStyle = css('--series'); ctx.lineWidth = 1.2; ctx.beginPath();
+  pts.forEach((p,i) => {
+    const x = (p[0]-x0)/((x1-x0)||1)*(W-2)+1;
+    const y = H-2 - (p[1]-y0)/((y1-y0)||1)*(H-4);
+    i ? ctx.lineTo(x,y) : ctx.moveTo(x,y);
+  });
+  ctx.stroke();
+}
+
+/* The Ware chart: Sale dots sized by Stack, the dispersion of where Sales landed,
+   the Estimate as the trend line, its precision interval as dotted edges, and a
+   volume strip. A compact reading of the #12 pane set — the full four-pane chart
+   with the Listing shelf lines and the board ladder is that prototype's job. */
+function wareChart(cv, w, days) {
+  const {ctx, w:W, h:H} = fitCanvas(cv);
+  const PADL = 46, PADR = 10, PADT = 8, VOL = 26, GAP = 6;
+  const plotH = H - PADT - VOL - GAP - 16;
+  const t1 = D.asOf, t0 = t1 - days * DAY;
+  const dots = w.dots.filter(d => d[0] >= t0);
+  const ser  = w.series.filter(s => s[0] >= t0);
+
+  ctx.clearRect(0,0,W,H);
+  const vals = dots.map(d => d[1]).sort((a,b)=>a-b);
+  let lo = quantile(vals, 0.02), hi = quantile(vals, 0.98);
+  ser.forEach(s => { if (s[2]!=null) { lo = Math.min(lo??s[2], s[2]); hi = Math.max(hi??s[3], s[3]); } });
+  if (lo == null) { lo = 0; hi = Math.max(1, w.minListing || 1); }
+  if (hi - lo < 1) { hi = lo + 1; }
+  lo = Math.max(0, lo - (hi-lo)*0.10); hi = hi + (hi-lo)*0.10;
+
+  const X = t => PADL + (t - t0) / (t1 - t0) * (W - PADL - PADR);
+  const Y = v => PADT + plotH - (v - lo) / (hi - lo) * plotH;
+
+  // grid + y labels
+  ctx.strokeStyle = css('--grid'); ctx.fillStyle = css('--ink-3');
+  ctx.font = '10px "Segoe UI", sans-serif'; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const v = lo + (hi-lo)*i/4, y = Math.round(Y(v)) + .5;
+    ctx.beginPath(); ctx.moveTo(PADL, y); ctx.lineTo(W-PADR, y); ctx.stroke();
+    ctx.textAlign = 'right'; ctx.fillText(gilShort(v), PADL - 6, y + 3);
+  }
+  // x labels
+  ctx.textAlign = 'center';
+  for (let i = 0; i <= 4; i++) {
+    const t = t0 + (t1-t0)*i/4;
+    const d = new Date(t*1000);
+    ctx.fillText((d.getMonth()+1) + '/' + d.getDate(), X(t), H - 3);
+  }
+
+  // freshness: the stretch since the last upload, hatched
+  if (w.lastUpload && w.lastUpload < t1 - 6*3600) {
+    const xa = X(Math.max(t0, w.lastUpload)), xb = X(t1);
+    ctx.save(); ctx.beginPath(); ctx.rect(xa, PADT, xb-xa, plotH); ctx.clip();
+    ctx.strokeStyle = css('--axis'); ctx.globalAlpha = .5;
+    for (let x = xa - plotH; x < xb; x += 7) {
+      ctx.beginPath(); ctx.moveTo(x, PADT + plotH); ctx.lineTo(x + plotH, PADT); ctx.stroke();
+    }
+    ctx.restore();
+    const label = 'no upload for ' + ageText(w.lastUpload);
+    ctx.fillStyle = css('--ink-3');
+    if (ctx.measureText(label).width + 8 < xb - xa) {
+      ctx.textAlign = 'left'; ctx.fillText(label, xa + 4, PADT + 11);
+    } else {
+      ctx.textAlign = 'right'; ctx.fillText(label, xb - 2, PADT + 11);
+    }
+  }
+
+  // precision interval — dotted edges, never a forecast
+  const band = ser.filter(s => s[2] != null && s[3] != null);
+  if (band.length > 1) {
+    ctx.fillStyle = css('--series-dim'); ctx.beginPath();
+    band.forEach((s,i) => i ? ctx.lineTo(X(s[0]), Y(s[3])) : ctx.moveTo(X(s[0]), Y(s[3])));
+    for (let i = band.length-1; i >= 0; i--) ctx.lineTo(X(band[i][0]), Y(band[i][2]));
+    ctx.closePath(); ctx.fill();
+    ctx.setLineDash([2,3]); ctx.strokeStyle = css('--series'); ctx.globalAlpha = .55; ctx.lineWidth = 1;
+    [2,3].forEach(k => {
+      ctx.beginPath();
+      band.forEach((s,i) => i ? ctx.lineTo(X(s[0]), Y(s[k])) : ctx.moveTo(X(s[0]), Y(s[k])));
+      ctx.stroke();
+    });
+    ctx.globalAlpha = 1; ctx.setLineDash([]);
+  }
+
+  // Sale dots, radius by Stack, colour fixed to the Quality
+  ctx.fillStyle = w.hq ? css('--hq') : css('--nq'); ctx.globalAlpha = .5;
+  dots.forEach(d => {
+    const r = Math.min(5, 1.4 + Math.sqrt(d[2]) * 0.55);
+    ctx.beginPath(); ctx.arc(X(d[0]), Y(d[1]), r, 0, 6.2832); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+
+  // the Estimate — a dark halo first so it stays legible through a dense Sale cloud
+  const trace = () => {
+    ctx.beginPath(); let pen = false;
+    ser.forEach(s => {
+      if (s[1] == null) { pen = false; return; }
+      const x = X(s[0]), y = Y(s[1]);
+      pen ? ctx.lineTo(x,y) : ctx.moveTo(x,y); pen = true;
+    });
+    ctx.stroke();
+  };
+  ctx.lineJoin = 'round';
+  ctx.strokeStyle = css('--card'); ctx.lineWidth = 4.4; trace();
+  ctx.strokeStyle = css('--series'); ctx.lineWidth = 2.1; trace();
+
+  // volume strip
+  const byDay = {};
+  dots.forEach(d => { const k = Math.floor(d[0]/DAY); byDay[k] = (byDay[k]||0) + d[2]; });
+  const vmax = Math.max(1, ...Object.values(byDay));
+  const bw = Math.max(1.5, (W-PADL-PADR)/days - 1);
+  ctx.fillStyle = css('--axis');
+  Object.entries(byDay).forEach(([k,v]) => {
+    const x = X(k*DAY), h = v/vmax*VOL;
+    ctx.fillRect(x - bw/2, PADT + plotH + GAP + (VOL - h), bw, h);
+  });
+  ctx.fillStyle = css('--ink-3'); ctx.textAlign = 'left';
+  ctx.fillText('units/day', PADL + 2, PADT + plotH + GAP + 9);
+}
+
+/* ==========================================================================
+   Pricing — the flip card
+   ========================================================================== */
+/* A canvas inside a pane that was display:none has no size yet, which is why charts
+   used to come up blank on a tab switch. Wait for a real box before drawing. */
+function drawWhenSized(cv, fn, tries) {
+  tries = tries == null ? 40 : tries;
+  const r = cv.getBoundingClientRect();
+  if (r.width > 4 && r.height > 4) { fn(); return; }
+  if (tries > 0) requestAnimationFrame(() => drawWhenSized(cv, fn, tries - 1));
+}
+
+/* The Pricing tab is one Retainer's shelf: the Wares it is selling right now, and
+   their History. No portfolio summary — the Retainer strip above chooses whose shelf
+   you are looking at, and hovering a row turns the card over to that Ware. */
+function waresOnShelf() {
+  let props = D.proposals.filter(p => !p.hold);
+  if (state.character !== '*') props = props.filter(p => charOf[p.retainer] === state.character);
+  if (state.retainer !== '*') props = props.filter(p => p.retainer === state.retainer);
+  const seen = new Set(), out = [];
+  props.forEach(p => {
+    const w = wareByKey[p.ware];
+    if (state.search && !w.name.toLowerCase().includes(state.search)) return;
+    const id = p.ware + '|' + p.retainer;
+    if (seen.has(id)) return;
+    seen.add(id);
+    out.push({w, p});
+  });
+  return out;
+}
+
+function renderPricing() {
+  const shelf = waresOnShelf();
+  if (!shelf.some(s => s.w.key === state.hovered)) {
+    state.hovered = shelf.length ? shelf[0].w.key : null;
+  }
+  const cur = wareByKey[state.hovered] || null;
+  const curProp = (shelf.find(s => s.w.key === state.hovered) || {}).p;
+  state.faceA = !state.faceA;                     // alternate faces so each change flips
+
+  const scopeLabel = state.retainer !== '*' ? state.retainer
+                   : state.character !== '*' ? state.character + ', all Retainers'
+                   : 'every Retainer';
+
+  document.getElementById('pane-pricing').innerHTML = `
+   <div class="pricing">
+    <div class="warecol">
+     <div class="sect">On the board — ${esc(scopeLabel)} (${shelf.length})</div>
+     <div class="warelist">
+      ${shelf.length ? shelf.map(({w, p}) => `
+        <button class="wrow" data-hover="${w.key}" aria-current="${state.hovered===w.key}">
+          ${qPill(w)}<span class="wn">${esc(w.name)}</span>
+          <canvas data-spark="${w.key}"></canvas>
+          <span class="sev ${w.est.severity}"></span>
+        </button>
+        <div class="wsub num">${esc(p.retainer)} · ${gil(p.to || p.from)} gil · ×${p.stack}</div>`).join('')
+        : '<div class="muted" style="padding:14px 6px">Nothing on the board for this scope.</div>'}
+     </div>
+    </div>
+
+    <div class="flip ${state.faceA ? '' : 'flipped'}" id="flip">
+      <div class="flip-inner">
+        <div class="face front">${state.faceA && cur ? wareFace(cur, curProp) : ''}</div>
+        <div class="face back">${!state.faceA && cur ? wareFace(cur, curProp) : ''}</div>
+      </div>
+    </div>
+   </div>`;
+
+  document.querySelectorAll('[data-spark]').forEach(cv =>
+    drawWhenSized(cv, () => sparkline(cv, wareByKey[cv.dataset.spark])));
+
+  /* Hover turns the card over; click does the same, because on the narrow strip you are
+     scrolling sideways and hovering past three Wares to reach the fourth is not selection. */
+  const pick = key => { if (state.hovered !== key) { state.hovered = key; renderPricing(); } };
+  document.querySelectorAll('[data-hover]').forEach(b => {
+    b.onmouseenter = () => pick(b.dataset.hover);
+    b.onclick = () => pick(b.dataset.hover);
+  });
+
+  const cv = document.querySelector('.face' + (state.faceA ? '.front' : '.back') + ' canvas.big');
+  if (cv && cur) drawWhenSized(cv, () => wareChart(cv, cur, 90));
+}
+
+function wareFace(w, p) {
+  const e = w.est;
+  const note = SEV_NOTE[e.severity];
+  return `
+    <div class="chartwrap">
+      <div class="chart-head">
+        ${qPill(w)}<h3>${esc(w.name)}</h3>
+        <span class="sev ${e.severity}">${e.severity}</span>
+        <span class="muted">${esc(w.type)} · Sample ${w.n30} Sales/30d · ${ageText(w.lastUpload)}</span>
+        <span class="est num">${gil(e.point)}<small> gil Estimate</small></span>
+      </div>
+      ${p ? `<div class="shelfline">
+        <span class="muted">On <b>${esc(p.retainer)}</b> at</span>
+        <b class="num">${gil(p.to || p.from)}</b>
+        <span class="muted">×${p.stack} · Floor ${gil(p.floor)} · ${esc(p.strategy)}</span>
+        <span style="flex:1"></span>
+        <span class="act ${p.act}">${p.act}</span></div>` : ''}
+      ${note ? `<div class="warnbox ${e.severity==='severe'?'severe':''}" style="margin-bottom:7px">
+        <span class="ic">!</span><span>${esc(note)}<span class="unapproved">copy not approved</span></span></div>` : ''}
+      <canvas class="big"></canvas>
+      <div class="legend">
+        <span><i style="background:var(--${w.hq?'hq':'nq'})"></i>Sales, sized by Stack</span>
+        <span><i style="background:var(--series)"></i>Estimate (${w.window}-day window)</span>
+        <span><i style="background:var(--series-dim)"></i>80% precision interval — how well the Estimate is pinned down, <b>not a forecast</b></span>
+      </div>
+      <div class="statgrid" style="margin-top:8px">
+        <div><span>Lowest Competing</span><b class="num">${gil(w.minListing)}</b></div>
+        <div><span>Days of Supply</span><b class="num">${w.dos==null?'—':w.dos.toFixed(1)+'d'}</b></div>
+        <div><span>Sold per day</span><b class="num">${w.velocity ? w.velocity.toFixed(1) : '—'}</b></div>
+        <div><span>Units on the board</span><b class="num">${w.unitsForSale}</b></div>
+        <div><span>Data Centre average</span><b class="num">${gil(w.dcAvgSale)}</b></div>
+        <div><span>Basis</span><b>${esc(e.basis||'—')}</b></div>
+      </div>
+      <div class="muted" style="font-size:10.5px;margin-top:6px">
+        The Data Centre figure describes Markets you would have to travel to — never a price available here.
+      </div>
+    </div>`;
+}
+
+/* ==========================================================================
+   Retainer inventory model
+
+   A Retainer's stock lives in 7 pages of 25 slots (FFXIVClientStructs
+   RetainerPage1..7). THE SELL SPACE IS A SUBSET OF THOSE SLOTS — the Player's
+   allocation of the Retainer's own items. What ends up on the board is an
+   OUTCOME of that allocation, not the allocation itself: EMM fills the 20
+   postings from the granted stock, most revenue first.
+   ========================================================================== */
+const PAGES = 7, PER_PAGE = 25;
+
+const TYPE_ICON = {
+  Materia:     {g:'◆', c:'#8a7fd8'},
+  Material:    {g:'⬢', c:'#5aa46f'},
+  Consumable:  {g:'⬤', c:'#c8663c'},
+  Gear:        {g:'⬟', c:'#5d86b8'},
+  Furnishing:  {g:'▤', c:'#c39a49'},
+  Collectible: {g:'★', c:'#b06aa8'},
+  Miscellany:  {g:'●', c:'#7b8798'},
+};
+
+/* One deterministic inventory layout per Retainer: the Wares EMM knows about
+   first, then unenrolled stock the Player also keeps there. */
+const invCache = {};
+function inventoryOf(name) {
+  if (invCache[name]) return invCache[name];
+  const mine = D.proposals.filter(p => p.retainer === name);
+  const others = D.wares.filter(w => !mine.some(p => p.ware === w.key));
+  const slots = new Array(PAGES * PER_PAGE).fill(null);
+  let seed = name.split('').reduce((a, c) => a + c.charCodeAt(0), 7);
+  const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+
+  mine.forEach((p, i) => slots[i] = {ware: p.ware, qty: p.units, listed: !p.hold});
+  const spare = Math.min(PAGES * PER_PAGE, D.space[name].invSlots + 9);
+  for (let i = mine.length; i < spare; i++) {
+    const w = others[Math.floor(rnd() * others.length)];
+    slots[i] = {ware: w.key, qty: 1 + Math.floor(rnd() * Math.min(99, w.stackSize)), listed: false};
+  }
+  invCache[name] = slots;
+  return slots;
+}
+
+function iconTile(entry, extraCls, idx) {
+  if (!entry) return `<button class="itile empty ${extraCls}" data-invslot="${idx}"></button>`;
+  const w = wareByKey[entry.ware];
+  const t = TYPE_ICON[w.type] || TYPE_ICON.Miscellany;
+  return `<button class="itile ${extraCls}" data-invslot="${idx}"
+      style="background:linear-gradient(150deg,${t.c}55,${t.c}22);border-color:${t.c}77"
+      title="${esc(w.name)}${w.hq?' (HQ)':''} ×${entry.qty}">
+    <span class="gl" style="color:${t.c}">${t.g}</span>
+    ${w.hq ? '<em class="hq">✦</em>' : ''}
+    ${entry.qty > 1 ? `<em class="qty num">${entry.qty}</em>` : ''}
+  </button>`;
+}
+
+/* ==========================================================================
+   Sell Space — the Retainer's item allocation
+   ========================================================================== */
+function renderSpace() {
+  const rets = D.characters.flatMap(c => c.retainers.map(r => ({...r, char:c.name})));
+  const sel = state.retainer !== '*' ? state.retainer : rets[0].name;
+  const sp = D.space[sel];
+  const inv = inventoryOf(sel);
+  if (!state.grantedSlots) {
+    state.grantedSlots = new Set(Array.from({length: sp.invSlots}, (_, i) => i));
+  }
+  const page = state.page || 0;
+  const marksOnPage = p => {
+    let n = 0;
+    for (let i = p * PER_PAGE; i < (p + 1) * PER_PAGE; i++) if (state.grantedSlots.has(i)) n++;
+    return n;
+  };
+  const granted = state.grantedSlots.size;
+  const listed = D.proposals.filter(p => p.retainer === sel && !p.hold);
+
+  /* Slot count carries intent, and it FEEDS the Strategy as well as capping
+     capacity: many slots means the Ware is being run as a commodity. */
+  const intent = granted >= 24 ? ['commodity', 'Undercut to Sell Fast']
+               : granted >= 8  ? ['mixed', "left to the Retainer's Strategy"]
+                               : ['single-sale', 'Hold for a Better Price'];
+
+  document.getElementById('pane-space').innerHTML = `
+   <div class="space">
+    <div>
+      <div class="sect">Retainers</div>
+      ${rets.map(r => {
+        const s = D.space[r.name];
+        const pct = s.occupied / s.postings * 100;
+        return `<button class="rchip" style="width:100%;margin-bottom:6px" data-space="${r.name}" aria-pressed="${r.name===sel}">
+          <span class="rn">${esc(r.name)}</span>
+          <span class="rs">${esc(r.char)} · ${esc(r.city)} · Tax ${r.tax}%</span>
+          <span class="rs num">${s.invSlots} of ${PAGES*PER_PAGE} stock slots marked</span>
+          <span class="rs num">${s.occupied}/${s.postings} postings filled</span>
+          <span class="cap"><i class="${pct>=100?'full':''}" style="width:${pct}%"></i></span>
+        </button>`;
+      }).join('')}
+    </div>
+
+    <div>
+      <div class="sect">${esc(sel)} — stock EMM may sell</div>
+      <div class="pagetabs">
+        ${Array.from({length:PAGES}, (_,p) => {
+          const m = marksOnPage(p);
+          return `<button class="pagetab" data-page="${p}" aria-pressed="${p===page}">${p+1}
+            <em class="mk">${m ? m + ' ✓' : '—'}</em></button>`;
+        }).join('')}
+      </div>
+      <div class="invgrid">
+        ${Array.from({length:PER_PAGE}, (_,i) => {
+          const idx = page * PER_PAGE + i;
+          const cls = [state.grantedSlots.has(idx) ? 'granted' : '',
+                       inv[idx] && inv[idx].listed ? 'listed' : ''].join(' ');
+          return iconTile(inv[idx], cls, idx);
+        }).join('')}
+      </div>
+      <div class="legend-row">
+        <span><b style="box-shadow:inset 0 0 0 2px rgba(30,179,127,0.75);background:var(--card-2)"></b>in the sell space</span>
+        <span><b style="background:var(--accent);border-radius:50%"></b>on the board now</span>
+      </div>
+      <div class="muted" style="font-size:11px;margin-top:8px">
+        Marked, not typed. The drawing happens on the Retainer's own window — this is the
+        same grid read back, for checking and for repair.
+      </div>
+    </div>
+
+    <div>
+      <div class="sect">What that allocation put on the board</div>
+      <div class="boardstrip">
+        ${Array.from({length:20}, (_,i) => {
+          const p = listed[i];
+          const w = p ? wareByKey[p.ware] : null;
+          return `<div class="slot ${p?'filled':''}" title="${p ? esc(w.name) : 'free posting'}">${
+            p ? (TYPE_ICON[w.type] || TYPE_ICON.Miscellany).g : ''}</div>`;
+        }).join('')}
+      </div>
+      <div class="muted" style="font-size:11px;margin-top:7px">
+        ${listed.length} of 20 postings filled from ${granted} marked stock slots. EMM chooses
+        which of the granted stock goes up, most revenue first — the board is an outcome of the
+        allocation, never the allocation itself.
+      </div>
+
+      <div class="sect" style="margin-top:15px">What the allocation says about intent</div>
+      <div class="card" style="padding:9px 11px">
+        <div class="statgrid" style="grid-template-columns:1fr">
+          <div><span>Slots marked</span><b class="num">${granted} across ${
+            Array.from({length:PAGES},(_,p)=>marksOnPage(p)).filter(Boolean).length} pages</b></div>
+          <div><span>Reads as</span><b>${intent[0]}</b></div>
+          <div><span>Strategy assigned</span><b>${intent[1]}</b></div>
+          <div><span>Fill order</span><b>highest turnover first</b></div>
+        </div>
+        <div class="muted" style="font-size:11px;margin-top:7px">
+          Slot count drives the Strategy as well as capping capacity — it is a suggestion for the
+          Retainer, and a Group overrides it only where you have set one.
+        </div>
+      </div>
+
+    </div>
+   </div>`;
+
+  document.querySelectorAll('[data-space]').forEach(b =>
+    b.onclick = () => { state.retainer = b.dataset.space; state.grantedSlots = null; state.page = 0; renderAll(); });
+  document.querySelectorAll('[data-page]').forEach(b =>
+    b.onclick = () => { state.page = +b.dataset.page; renderSpace(); });
+  /* Click one, shift-click a run, or drag a box — all three mark. */
+  const setRange = (a, b, on) => {
+    for (let i = Math.min(a,b); i <= Math.max(a,b); i++) {
+      on ? state.grantedSlots.add(i) : state.grantedSlots.delete(i);
+    }
+  };
+  document.querySelectorAll('[data-invslot]').forEach(b =>
+    b.onclick = e => {
+      const i = +b.dataset.invslot;
+      if (e.shiftKey && state.lastSlot != null) {
+        setRange(state.lastSlot, i, !state.grantedSlots.has(i));
+      } else {
+        state.grantedSlots.has(i) ? state.grantedSlots.delete(i) : state.grantedSlots.add(i);
+      }
+      state.lastSlot = i;
+      renderSpace();
+    });
+
+  const grid = document.querySelector('.invgrid');
+  if (grid) {
+    let anchor = null, adding = true;
+    grid.addEventListener('mousedown', e => {
+      const t = e.target.closest('[data-invslot]');
+      if (!t) return;
+      anchor = +t.dataset.invslot;
+      adding = !state.grantedSlots.has(anchor);
+    });
+    grid.addEventListener('mouseover', e => {
+      if (anchor == null) return;
+      const t = e.target.closest('[data-invslot]');
+      if (!t) return;
+      setRange(anchor, +t.dataset.invslot, adding);
+      renderSpace();
+    });
+    window.addEventListener('mouseup', () => { anchor = null; }, {once:true});
+  }
+}
+
+/* ==========================================================================
+   Holdings / Ledger / Strategies
+   ========================================================================== */
+function renderHoldings() {
+  const rows = D.proposals.filter(p => state.retainer === '*' || p.retainer === state.retainer);
+  const noBasis = rows.filter(r => r.basis == null).length;
+  document.getElementById('pane-holdings').innerHTML = `
+    <div class="queue-head">
+      <span class="count">${rows.length} Wares held</span>
+      <span class="muted">Cost Basis on ${rows.length - noBasis} of ${rows.length} — Profit can only be computed where it exists</span>
+    </div>
+    <div class="card" style="padding:4px 8px 8px">
+    <table class="t">
+      <thead><tr><th>Ware</th><th>Retainer</th><th class="r">Units</th><th class="r">Cost Basis</th>
+      <th class="r">Estimate</th><th class="r">Net Proceeds</th><th class="r">Profit</th><th class="r">Supply</th></tr></thead>
+      <tbody>${rows.map(p => {
+        const w = wareByKey[p.ware];
+        const profit = p.basis == null ? null : (p.netProceeds - p.basis) * p.units;
+        return `<tr>
+          <td>${qPill(w)} ${esc(w.name)}</td>
+          <td class="muted">${esc(p.retainer)}</td>
+          <td class="r num">${p.units}</td>
+          <td class="r num">${p.basis == null
+              ? '<span class="muted" title="Crafted, gathered or from a venture — no acquisition hook exists">derived</span>'
+              : gil(p.basis)}</td>
+          <td class="r num">${gil(w.est.point)} <span class="sev ${w.est.severity}"></span></td>
+          <td class="r num">${gil(p.netProceeds)}</td>
+          <td class="r num" style="color:${profit == null ? 'var(--ink-3)' : profit > 0 ? 'var(--series)' : 'var(--severe)'}">
+            ${profit == null ? '—' : gilShort(profit)}</td>
+          <td class="r num">${p.dos == null ? '—' : p.dos.toFixed(1) + 'd'}</td></tr>`;
+      }).join('')}</tbody>
+    </table></div>
+    <div class="warnbox" style="margin-top:11px"><span class="ic">i</span>
+      <span>Where no Cost Basis exists EMM derives a defensible Floor from History rather than
+      refusing to act. Those rows say <b>derived</b>, and the Floor is shown on the Ware.</span></div>`;
+}
+
+function renderStrategies() {
+  const rets = D.characters.flatMap(c => c.retainers.map(r => ({...r, char:c.name})));
+  document.getElementById('pane-strategies').innerHTML = `
+    <div class="sect">Which Strategy each Retainer is running</div>
+    <div class="card" style="padding:4px 8px 8px;margin-bottom:14px">
+      <table class="t">
+        <thead><tr><th>Retainer</th><th>Character</th><th>Strategy</th><th>Goal</th>
+          <th class="r">Overrides</th></tr></thead>
+        <tbody>${rets.map((r,i) => {
+          const s = STRATEGIES[i % 4];
+          return `<tr><td><b>${esc(r.name)}</b></td><td class="muted">${esc(r.char)}</td>
+            <td><select class="btn">${STRATEGIES.map(x =>
+              `<option ${x.name===s.name?'selected':''}>${esc(x.name)}</option>`).join('')}</select></td>
+            <td class="muted">${esc(s.goal)}</td>
+            <td class="r muted num">${i % 3 ? (i % 3) + ' Wares' : '—'}</td></tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>
+    <div class="warnbox" style="margin-bottom:14px"><span class="ic">i</span>
+      <span><b>A Strategy is assigned per Retainer, and that is usually the whole of it.</b>
+      Every Group starts at <i>Inherit</i>, so nothing competes until you deliberately set one.
+      Where you do, <b>local beats global</b> — a Ware beats its Group, and a Group beats the
+      Retainer. The <b>Overrides</b> column counts how many Wares on that Retainer are currently
+      running something other than its Strategy.</span></div>
+
+    <div class="queue-head"><span class="count">${STRATEGIES.length} Strategies</span>
+      <span class="muted">named for what they are trying to do</span>
+      <span style="flex:1"></span><button class="btn">New Strategy</button></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
+      ${STRATEGIES.map(s => {
+        const adv = s.name.startsWith('Advanced');
+        const used = rets.filter((_,i) => STRATEGIES[i % 4].name === s.name).length;
+        return `<div class="card" style="padding:11px 12px${adv?';border-color:var(--accent-dim)':''}">
+          <div style="display:flex;align-items:baseline;gap:8px">
+            <b style="font-size:13px">${esc(s.name)}</b>
+            <span class="muted" style="font-size:11px">${used ? used + ' Retainers' : 'unused'}</span>
+            <span style="flex:1"></span>
+            <button class="btn ghost" data-live="showWhy">Show me why</button></div>
+          <div class="muted" style="font-size:11px;margin:4px 0 9px">${esc(s.goal)}</div>
+          <div class="warnbox whybox" hidden style="margin-bottom:8px"><span class="ic">i</span>
+            <span>${adv ? 'Nothing is written yet. Every named Value Source is available and the editor checks the expression as you type.'
+              : `The Floor is the binding one: EMM will not list below <code class="expr" style="display:inline;padding:1px 5px">${esc(s.floor)}</code>
+                 however attractive the ask looks. <b>costBasis</b> is what you paid, <b>estimate</b> is the
+                 pricing engine's fitted Unit Price — both are editable, and so is this expression.`}</span></div>
+          <div class="statgrid" style="grid-template-columns:1fr">
+            <div><span>Floor</span><code class="expr" style="padding:2px 6px">${esc(s.floor)}</code></div>
+            <div><span>Ask</span><code class="expr" style="padding:2px 6px">${esc(s.ask)}</code></div>
+            <div><span>Horizon</span><b>${esc(s.horizon)}</b></div>
+          </div>
+          ${adv ? `<div class="muted" style="font-size:11px;margin-top:7px">
+            Nothing is filled in. Every named Value Source is available, and the editor checks the
+            expression as you type.</div>` : ''}
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="warnbox" style="margin-top:12px"><span class="ic">i</span>
+      <span>Every one of these is an expression you can read and edit — that is why this is a tab
+      and not a config page. <b>Advanced</b> exists so a Player can write a Strategy nobody shipped.
+      <span class="unapproved">names not approved</span></span></div>`;
+}
+
+/* ==========================================================================
+   Scan — where the data comes from, how old it is, and what a refresh costs
+
+   Every number on this screen is bounded by the #10 API-citizenship ruling:
+   ~4 req/s sustained against a published 25, at most 2 simultaneous connections
+   against a cap of 8, a 15-minute floor between sweeps that config cannot lower,
+   and a manual bounded refresh that is exempt from the interval because a human
+   pressing a button is not a timer.
+   ========================================================================== */
+function renderScan() {
+  const stale = D.wares.filter(w => D.asOf - w.lastUpload > 6 * 3600).length;
+  const oldest = D.wares.reduce((a, w) => Math.min(a, w.lastUpload), Infinity);
+  const enrolled = 302;                       // Wares in the sell space, all Retainers
+  const reqs = Math.ceil(enrolled / 100) * 2; // 100-Item batches, aggregated + history
+  const secs = Math.ceil(reqs / 4);
+
+  document.getElementById('pane-scan').innerHTML = `
+    <div class="queue-head">
+      <span class="count">Scan</span>
+      <span class="muted">Where every figure came from, how old it is, and what asking for more costs</span>
+    </div>
+
+    <div class="card" style="padding:12px 13px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <button class="btn primary" data-live="refresh">Refresh now</button>
+        <select class="btn">
+          <option>The sell space (${enrolled} Wares)</option>
+          <option>This Character's Retainers (${enrolled - 96} Wares)</option>
+          <option>Watchlist only (44 Wares)</option>
+        </select>
+        <span class="muted">≈ ${reqs} requests · about ${secs}s · never exceeds 4 requests a second</span>
+        <span style="flex:1"></span>
+        <span class="sev ok" id="scanState">idle</span>
+      </div>
+      <div class="bar" style="margin-top:10px;height:6px"><i id="scanBar" style="width:0%"></i></div>
+      <div class="muted" style="font-size:11px;margin-top:6px">
+        A manual refresh is exempt from the interval — a human pressing a button is not a timer.
+        It is still bounded: same rate, same connection cap, and it will not run twice over.
+      </div>
+    </div>
+
+    <div class="kpis" style="margin-bottom:12px">
+      <div class="kpi"><div class="k">Freshest figure</div><div class="v num">${ageText(Math.max(...D.wares.map(w=>w.lastUpload)))}</div><div class="n">Cactuar</div></div>
+      <div class="kpi"><div class="k">Oldest figure</div><div class="v num">${ageText(oldest)}</div><div class="n">${stale} Wares over 6h</div></div>
+      <div class="kpi"><div class="k">Next automatic sweep</div><div class="v num">21:47</div><div class="n">cadence fitted to this World</div></div>
+      <div class="kpi"><div class="k">Requests, last hour</div><div class="v num">338</div><div class="n">0.09/s against a limit of 25</div></div>
+    </div>
+
+    <div class="sect">Sources, and what each is trusted for</div>
+    <div class="card" style="padding:4px 8px 8px;margin-bottom:12px">
+      <table class="t">
+        <thead><tr><th>Source</th><th>Scope</th><th>Freshness</th><th>Trusted for</th><th class="r">Wares</th></tr></thead>
+        <tbody>
+          <tr><td>Universalis</td><td class="muted">Cactuar</td><td class="num">${ageText(Math.max(...D.wares.map(w=>w.lastUpload)))}</td>
+              <td class="muted">History and board depth</td><td class="r num">302</td></tr>
+          <tr><td>Universalis</td><td class="muted">Aether</td><td class="num">4h ago</td>
+              <td class="muted">Cold start only — a Market you would travel to</td><td class="r num">302</td></tr>
+          <tr><td>Boards you opened</td><td class="muted">Cactuar</td><td class="num">11m ago</td>
+              <td class="muted">Ground truth, overrides the aggregator</td><td class="r num">18</td></tr>
+          <tr><td>Your own Sales</td><td class="muted">Cactuar</td><td class="num">2h ago</td>
+              <td class="muted">The only Source that carries Cost Basis</td><td class="r num">96</td></tr>
+          <tr><td>Imported store</td><td class="muted">Cactuar</td><td class="num">1d ago</td>
+              <td class="muted">Detection time, not Sale time — never used for time-of-day</td><td class="r num">211</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sect">Backfill</div>
+    <div class="card" style="padding:10px 12px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:11px;flex-wrap:wrap">
+        <span>Deep History, one Ware at a time</span>
+        <span class="muted num">184 of 302 complete</span>
+        <span style="flex:1"></span>
+        <button class="btn" data-live="pauseBackfill">Pause</button>
+      </div>
+      <div class="bar" style="margin-top:9px;height:6px"><i style="width:61%"></i></div>
+      <div class="muted" style="font-size:11px;margin-top:7px">
+        A separate budget from the refresh above: one-time, throttled, resumable, and visible.
+        It never runs on a silent timer. Deep requests fail often enough that this is patient by
+        design — a stalled one is retried, not abandoned.
+      </div>
+    </div>
+
+    <div class="warnbox"><span class="ic">i</span>
+      <span><b>What this screen will not let you do.</b> The rate ceiling, the two-connection cap
+      and the fifteen-minute floor between automatic sweeps are not settings. They exist because
+      the limits are per address, and the address may be a household. EMM asks for no more than
+      ordinary use asks for.</span></div>`;
+}
+
+/* ==========================================================================
+   First run
+   ========================================================================== */
+/* ==========================================================================
+   First run
+
+   Docked and unconfigured there is no room for findings, and cramming them in was
+   the squashed thing. So the compact pane is one sentence and one button: Setup.
+   Pressing it expands the window and runs the wizard.
+   ========================================================================== */
+const SETUP_STEPS = [
+  {id:'retainers', label:'Your Retainers'},
+  {id:'strategy',  label:'Strategy per Retainer'},
+  {id:'space',     label:'Sell space'},
+  {id:'scan',      label:'First scan'},
+];
+
+function renderFirstRunCompact() {
+  document.getElementById('pane-tasks').innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:9px;height:100%;justify-content:center;padding:4px 6px">
+      <div style="font-size:12.5px">EMM has found <b>6 Retainers</b> across 2 Characters.</div>
+      <div class="muted" style="font-size:11.5px">Nothing is configured yet, and nothing will act
+        until you say so.</div>
+      <button class="btn primary" id="btnSetup" style="padding:7px 12px;font-size:13px">Setup</button>
+    </div>`;
+  document.getElementById('btnSetup').onclick = () => {
+    state.expanded = true; state.setupStep = 0; setScene('firstrun');
+  };
+}
+
+function renderFirstRun() {
+  if (!state.expanded) return renderFirstRunCompact();
+  const step = SETUP_STEPS[state.setupStep];
+  const rets = D.characters.flatMap(c => c.retainers.map(r => ({...r, char:c.name})));
+  let body = '';
+
+  if (step.id === 'retainers') {
+    body = `<div class="lede">These are the Retainers EMM can reach. Untick any it should leave alone.</div>
+      <div class="card" style="padding:4px 8px 8px"><table class="t">
+        <thead><tr><th></th><th>Retainer</th><th>Character</th><th>City</th><th class="r">Tax</th>
+          <th class="r">On the board</th><th class="r">Stock</th></tr></thead>
+        <tbody>${rets.map(r => `<tr>
+          <td><input type="checkbox" checked style="accent-color:var(--accent)"></td>
+          <td><b>${esc(r.name)}</b></td><td class="muted">${esc(r.char)}</td>
+          <td class="muted">${esc(r.city)}</td><td class="r num">${r.tax}%</td>
+          <td class="r num">${D.space[r.name].occupied}/20</td>
+          <td class="r num">${D.space[r.name].invSlots} slots used</td></tr>`).join('')}
+        </tbody></table></div>
+      <div class="muted" style="font-size:11px">Tax is read live from each Retainer's city — it is
+        3% or 5% and it changes what a sale is actually worth.</div>`;
+
+  } else if (step.id === 'strategy') {
+    body = `<div class="lede">A Strategy is chosen <b>per Retainer</b>. Everything that Retainer
+        sells runs on it, unless a Group or a single Ware says otherwise.</div>
+      <div class="card" style="padding:4px 8px 8px"><table class="t">
+        <thead><tr><th>Retainer</th><th>Strategy</th><th>What it will do</th></tr></thead>
+        <tbody>${rets.map((r,i) => {
+          const s = STRATEGIES[i % 3];
+          return `<tr><td><b>${esc(r.name)}</b></td>
+            <td><select class="btn">${STRATEGIES.map(x =>
+              `<option ${x.name===s.name?'selected':''}>${x.name}</option>`).join('')}</select></td>
+            <td class="muted">${esc(s.goal)}</td></tr>`;
+        }).join('')}</tbody></table></div>
+      <div class="warnbox"><span class="ic">i</span><span>Every one of these is an expression you can
+        read and edit — press <b>Show me why</b> on the Strategies tab and the actual Floor appears.
+        <b>Advanced</b> starts blank and is yours to write.</span></div>`;
+
+  } else if (step.id === 'space') {
+    body = `<div class="lede">Mark which of each Retainer's stock EMM may sell. You can draw it on the
+        Retainer's own window later — this is the quick way to start.</div>
+      <div class="card" style="padding:11px 12px">
+        <div class="cfg-row" style="border:0;padding-top:0"><div class="lbl">
+          <b>Grant every Retainer their first inventory page</b>
+          <span>25 slots each, 150 in total. The rest stay outside EMM's reach until you say otherwise.</span>
+          </div><button class="sw" aria-pressed="true"></button></div>
+        <div class="cfg-row"><div class="lbl">
+          <b>Let EMM occupy all 20 postings</b>
+          <span>Lower it if you want to keep some postings for yourself.</span>
+          </div><select class="btn"><option>All 20</option><option>16</option><option>12</option></select></div>
+        <div class="cfg-row" style="border:0"><div class="lbl">
+          <b>Enrol stock dropped into a granted slot</b>
+          <span>Dropping something in is the enrolment — no second step.</span>
+          </div><button class="sw" aria-pressed="true"></button></div>
+      </div>
+      <div class="muted" style="font-size:11px">Slot count is read as intent: a Ware given many slots
+        is being run as a commodity, one slot as a single sale.</div>`;
+
+  } else {
+    body = `<div class="lede">EMM needs one scan before it can price anything. Here is what it will ask for.</div>
+      <div class="card" style="padding:11px 12px">
+        <div class="statgrid" style="grid-template-columns:1fr 1fr">
+          <div><span>Wares to price</span><b class="num">302</b></div>
+          <div><span>Requests</span><b class="num">8</b></div>
+          <div><span>Expected time</span><b class="num">about 2 seconds</b></div>
+          <div><span>Rate</span><b class="num">4/s against a limit of 25</b></div>
+        </div>
+        <div class="bar" style="margin-top:10px"><i style="width:0%"></i></div>
+      </div>
+      <div class="warnbox"><span class="ic">i</span><span><b>Nothing acts yet.</b> After this scan EMM
+        will show you what it would do. It cannot List, Reprice or Relist on its own until you grant a
+        Mandate, and it will never buy unattended in this version.</span></div>`;
+  }
+
+  document.getElementById('pane-tasks').innerHTML = `
+    <div class="onramp">
+      <div class="wiz">
+        ${SETUP_STEPS.map((s,i) => `<span class="wstep ${i===state.setupStep?'on':''} ${i<state.setupStep?'done':''}">
+          <b>${i+1}</b>${s.label}</span>`).join('<span class="wsep">›</span>')}
+      </div>
+      ${body}
+      <div style="display:flex;gap:8px;align-items:center;margin-top:4px">
+        <button class="btn" id="wizBack" ${state.setupStep?'':'disabled'}>Back</button>
+        <span style="flex:1"></span>
+        <button class="btn ghost" data-live="wizardFinish">Skip setup — show me what you found</button>
+        <button class="btn primary" id="wizNext">${
+          state.setupStep === SETUP_STEPS.length-1 ? 'Scan and finish' : 'Next'}</button>
+      </div>
+    </div>`;
+
+  const back = document.getElementById('wizBack');
+  back.onclick = () => { if (state.setupStep) { state.setupStep--; renderFirstRun(); } };
+  document.getElementById('wizNext').onclick = () => {
+    if (state.setupStep < SETUP_STEPS.length-1) { state.setupStep++; renderFirstRun(); }
+    else LIVE.wizardFinish();
+  };
+  wireLiveControls(document.getElementById('pane-tasks'));
+}
+
+/* There is no item overlay: a Ware's History is read on the Pricing tab, which the
+   queue and the search both jump to. One place, not a floating second window. */
+function openItem(key) {
+  state.hovered = key;
+  state.tab = 'pricing';
+  if (state.scene === 'bell' && !state.expanded) { state.expanded = true; setScene('bell'); }
+  renderNav(); renderPanes();
+}
+
+/* ==========================================================================
+   Config
+   ========================================================================== */
+const CFG = [
+  {id:'general',    label:'General',            icon:'cog'},
+  {id:'window',     label:'Window & docking',   icon:'bell'},
+  {id:'strategies', label:'Strategies & Groups',icon:'strategies'},
+  {id:'sources',    label:'Value Sources',      icon:'pricing'},
+  {id:'mandates',   label:'Mandates & Guardrails', icon:'shield'},
+  {id:'space',      label:'Sell space defaults',icon:'space'},
+  {id:'data',       label:'Data & Sources',     icon:'data'},
+  {id:'alerts',     label:'Alerts',             icon:'ledger'},
+];
+
+function renderConfig() {
+  document.getElementById('cfgItems').innerHTML = CFG.map(c =>
+    `<button class="nav-item" data-cfg="${c.id}" aria-selected="${state.cfg===c.id}">
+      ${svg(c.icon)}<span>${c.label}</span></button>`).join('');
+  document.querySelectorAll('[data-cfg]').forEach(b =>
+    b.onclick = () => { state.cfg = b.dataset.cfg; renderConfig(); });
+
+  const pane = document.getElementById('pane-cfg');
+  const row = (t,s,on) => `<div class="cfg-row"><div class="lbl"><b>${t}</b><span>${s}</span></div>
+    <button class="sw" aria-pressed="${on}"></button></div>`;
+
+  if (state.cfg === 'window') {
+    pane.innerHTML = `<div class="sect">Where the main window lives</div>
+      <div class="cfg-row"><div class="lbl"><b>Attach to</b>
+        <span>EMM appears with the window it is attached to and follows it as it moves.</span></div>
+        <select class="btn"><option>Retainer list (summoning bell)</option><option>Retainer sell list</option>
+          <option>Market board</option><option>Nothing — free window</option></select></div>
+      <div class="cfg-row"><div class="lbl"><b>Side</b><span>Which edge it docks to.</span></div>
+        <select class="btn"><option>Right</option><option>Left</option><option>Below</option></select></div>
+      ${row('Match the game window\'s height','Docked, EMM is as tall as the Retainer list. Expanding grows past it.',true)}
+      ${row('Remember a separate position per attachment','A free window and a docked one keep different geometry.',true)}
+      ${row('Show the status window','A small always-visible strip: what EMM is doing, and when it next acts.',true)}
+      ${row('Start expanded','Off means EMM opens as the summary strip and expands when you ask.',false)}`;
+  } else if (state.cfg === 'mandates') {
+    pane.innerHTML = `<div class="sect">Mandates — what EMM may do without being asked</div>
+      <div class="muted" style="font-size:11.5px;margin-bottom:8px">
+        None is held by default. A Strategy decides what EMM <i>would</i> do; a Mandate decides
+        whether it may do it unattended.</div>
+      ${row('Reprice','Change the Unit Price of an existing Listing.',true)}
+      ${row('List','Put stock from the sell space up for sale.',true)}
+      ${row('Relist','Put a withdrawn Ware back up.',true)}
+      ${row('Delist','Withdraw a Listing.',false)}
+      ${row('Buy','Spend gil unattended. Locked until the Ledger earns it.',false)}
+      <div class="sect" style="margin-top:14px">Guardrails — not configurable away</div>
+      <div class="card" style="padding:10px 12px">
+        <div class="statgrid" style="grid-template-columns:1fr 1fr">
+          <div><span>Exposure cap</span><b class="num">2,000,000 gil</b></div>
+          <div><span>Daily spend budget</span><b class="num">400,000 gil</b></div>
+          <div><span>Gil reserve</span><b class="num">300,000 gil</b></div>
+          <div><span>Drawdown brake</span><b>self-suspends at −15%</b></div>
+          <div><span>Per-Ware Ceiling</span><b>required</b></div>
+          <div><span>Audit trail</span><b>always on</b></div>
+        </div>
+        <div class="muted" style="font-size:11px;margin-top:8px">
+          The values are yours. Their existence is not — EMM will not list unattended without a Floor.</div>
+      </div>`;
+  } else if (state.cfg === 'sources') {
+    pane.innerHTML = `<div class="sect">Value Sources</div>
+      <div class="muted" style="font-size:11.5px;margin-bottom:9px">
+        Every number EMM knows, by name. Any of them can be written into an expression.</div>
+      <div class="card" style="padding:4px 8px 8px"><table class="t">
+        <thead><tr><th>Source</th><th>What it is</th><th class="r">This Ware</th></tr></thead><tbody>
+        ${[['minListing','Lowest Competing Unit Price on this World','333'],
+           ['estimate','The pricing engine\'s fitted Unit Price','310'],
+           ['historical','Median Unit Price over 90 days','298'],
+           ['soldPerDay','Units sold per day, from the Sample','432.1'],
+           ['daysOfSupply','Board depth divided by velocity','0.2d'],
+           ['costBasis','What you paid, from the Lot ledger','171'],
+           ['undercutDepth','Units listed below a given Unit Price','1,204'],
+           ['taxRate','Read live from the Retainer\'s city','5%']]
+          .map(r => `<tr><td><code class="expr" style="padding:1px 5px">${r[0]}</code></td>
+            <td class="muted">${esc(r[1])}</td><td class="r num">${r[2]}</td></tr>`).join('')}
+        </tbody></table></div>
+      <div class="sect" style="margin-top:14px">The Floor you are using</div>
+      <div class="expr">max(costBasis * 1.15, estimate * 0.95)</div>
+      <div class="muted" style="font-size:11px;margin-top:6px">
+        Reading the preset you are already using is the whole tutorial — there is no advanced mode.</div>`;
+  } else if (state.cfg === 'alerts') {
+    pane.innerHTML = `<div class="sect">Interrupts — these stop what you are doing</div>
+      ${row('EMM acted on a figure the data does not back','A provisional Estimate became a real Listing. The one thing worth interrupting for.',true)}
+      ${row('A guardrail tripped','EMM suspended itself. Always worth knowing.',true)}
+      <div class="sect" style="margin-top:14px">Everything else</div>
+      ${row('Digest in chat, on request','One summary instead of a stream.',true)}
+      ${row('Operational log in chat','One line per Retainer, as it happens.',true)}
+      ${row('Sound','Off by default.',false)}
+      <div class="warnbox" style="margin-top:12px"><span class="ic">i</span>
+        <span>There is deliberately no "you have been undercut" alert. It is the flagship
+        notification of every competing plugin and it trains exactly the reflex EMM is built
+        against. Deals, gil caps and market expiry were also cut: none of them is worth stopping
+        a fight for, and all three are readable where you would go looking anyway.</span></div>`;
+
+  } else if (state.cfg === 'data') {
+    pane.innerHTML = `<div class="sect">How often EMM asks</div>
+      <div class="cfg-row"><div class="lbl"><b>Automatic sweep</b>
+        <span>How often the sell space is refreshed when you are not asking.</span></div>
+        <select class="btn"><option>Fitted to this World (currently 3h)</option><option>Every hour</option>
+          <option>Every 6 hours</option><option>Once a day</option><option>Only when I ask</option></select></div>
+      <div class="cfg-row"><div class="lbl"><b>Requests per second</b>
+        <span>Published limit is 25. EMM will not go above 4, whatever is set here.</span></div>
+        <select class="btn"><option>4 — the ceiling</option><option>2</option><option>1</option></select></div>
+      <div class="cfg-row"><div class="lbl"><b>Simultaneous connections</b>
+        <span>Capped at 8 per address. EMM uses 2 and will not raise it.</span></div>
+        <select class="btn"><option>2 — the ceiling</option><option>1</option></select></div>
+      ${row('Refresh when I open a Retainer','A bounded top-up of that Retainer\'s Wares only.',true)}
+      ${row('Prefer what I see in game','A board you opened overrides the aggregator for that Ware.',true)}
+      <div class="sect" style="margin-top:14px">Backfill</div>
+      ${row('Fill in deep History in the background','One-time, throttled, resumable, and shown on the Scan tab. Never on a silent timer.',true)}
+
+      <div class="sect" style="margin-top:14px">Other plugins on this machine</div>
+      <div class="muted" style="font-size:11.5px;margin-bottom:4px">
+        EMM can read what these already hold. Everything imported stays labelled by Source and is
+        weighted below your own observations — it is never silently blended.</div>
+      <div class="card" style="padding:4px 8px 8px"><table class="t">
+        <thead><tr><th></th><th>Plugin</th><th>How</th><th>What EMM would take</th><th class="r">Status</th></tr></thead>
+        <tbody>
+        ${[['Allagan Tools','on','IPC','Holdings across every Character and Retainer, including alts you have not logged into','installed'],
+           ['Allagan Market','on','file','Your own past Sales — the one thing Universalis cannot give you','installed'],
+           ['Allagan Market price cache','off','file','A snapshot of market prices. Overwritten, not a series — low value.','installed'],
+           ['Allagan Item Search','no','—','Nothing EMM needs','installed'],
+           ['Price Insight','no','—','No IPC and no store to read','installed'],
+           ['PriceCheck','no','—','No IPC and no store to read','installed'],
+           ['Market board','no','—','No IPC and no store to read','installed']]
+          .map(r => `<tr>
+            <td><input type="checkbox" ${r[1]==='on'?'checked':''} ${r[1]==='no'?'disabled':''}
+                 style="accent-color:var(--accent)"></td>
+            <td>${r[1]==='no'?`<span class="muted">${esc(r[0])}</span>`:`<b>${esc(r[0])}</b>`}</td>
+            <td class="muted">${esc(r[2])}</td>
+            <td class="muted">${esc(r[3])}</td>
+            <td class="r muted">${esc(r[4])}</td></tr>`).join('')}
+        </tbody></table></div>
+      <div class="muted" style="font-size:11px;margin-top:6px">
+        The greyed rows are not missing features — those plugins expose no interface and keep no
+        store worth reading, so there is nothing to connect to.</div>
+
+      <div class="sect" style="margin-top:14px">Market data</div>
+      ${row('Universalis','History and board depth for the whole World.',true)}
+      ${row('Data Centre figures','Cold start only, while your own World is silent. Never quoted as a price here.',true)}
+      ${row('Boards you open in game','Free, exact, and always preferred over a fetch.',true)}
+      <div class="warnbox" style="margin-top:12px"><span class="ic">i</span>
+        <span>The ceilings above are floors as well: the fifteen-minute minimum between automatic
+        sweeps cannot be lowered, because the rate limits are per address and that address may be
+        a household.</span></div>`;
+
+  } else if (state.cfg === 'space') {
+    /* Across-Retainers space is v0.1 scope. The design: drawing stays the per-Retainer
+       act, but nobody should have to do it thirty times, so a SPACE PLAN grants space by
+       rule and drawing becomes the exception that overrides it. */
+    const rets = D.characters.flatMap(c => c.retainers.map(r => ({...r, char:c.name})));
+    pane.innerHTML = `
+      <div class="sect">The space plan — how much room every Retainer gives EMM</div>
+      <div class="muted" style="font-size:11.5px;margin-bottom:7px">
+        Drawing on a Retainer's own window always wins. This is what applies where you have not
+        drawn, so a new Retainer is usable without visiting it.</div>
+      <div class="card" style="padding:4px 8px 8px;margin-bottom:6px"><table class="t">
+        <thead><tr><th>Retainer</th><th>Stock pages</th><th class="r">Postings</th>
+          <th>Reserved for</th><th class="r">Drawn on?</th></tr></thead>
+        <tbody>${rets.map((r,i) => `<tr>
+          <td><b>${esc(r.name)}</b><br><span class="muted" style="font-size:10.5px">${esc(r.char)}</span></td>
+          <td><select class="btn"><option ${i%3?'':'selected'}>Page 1</option>
+            <option ${i%3===1?'selected':''}>Pages 1–2</option>
+            <option ${i%3===2?'selected':''}>All 7</option><option>None</option></select></td>
+          <td class="r"><select class="btn"><option>20</option><option ${i%2?'selected':''}>16</option>
+            <option>12</option><option>8</option></select></td>
+          <td><select class="btn"><option>Anything</option>
+            <option ${i===1?'selected':''}>High value only</option>
+            <option ${i===3?'selected':''}>Commodities only</option></select></td>
+          <td class="r muted">${i%3===2?'drawn — plan ignored':'—'}</td></tr>`).join('')}
+        </tbody></table></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+        <button class="btn">Apply this plan to every Retainer</button>
+        <button class="btn">Copy Bloodstained's drawn layout to…</button>
+        <button class="btn ghost">Clear all drawn overrides</button>
+      </div>
+
+      <div class="sect">How a Group spreads across Retainers</div>
+      <div class="card" style="padding:4px 8px 8px;margin-bottom:6px"><table class="t">
+        <thead><tr><th>Group</th><th class="r">Postings it may take, all Retainers</th>
+          <th>Prefers</th><th>If its Retainer is full</th></tr></thead>
+        <tbody>${[['Materia','40','lowest Tax city','spill to any Retainer with room'],
+                  ['Crafting materials','30','lowest Tax city','spill to any Retainer with room'],
+                  ['Housing','12','any','wait for a posting'],
+                  ['High-value cosmetics','8','lowest Tax city','wait for a posting']]
+          .map(g => `<tr><td><b>${esc(g[0])}</b></td>
+            <td class="r"><input value="${g[1]}" style="width:52px;background:var(--card-2);
+              border:1px solid var(--border);color:var(--ink);border-radius:4px;padding:2px 6px;
+              text-align:right;font:inherit"></td>
+            <td><select class="btn"><option>${esc(g[2])}</option><option>any</option>
+              <option>a named Retainer</option></select></td>
+            <td><select class="btn"><option>${esc(g[3])}</option>
+              <option>${g[3].startsWith('spill') ? 'wait for a posting' : 'spill to any Retainer with room'}</option>
+              <option>displace a lower Slot Yield</option></select></td></tr>`).join('')}
+        </tbody></table></div>
+      <div class="warnbox" style="margin-bottom:14px"><span class="ic">i</span>
+        <span><b>Spill is the question this answers.</b> A sell space is per Retainer, so a Group
+        whose stock outgrows one Retainer has to either wait or move. Saying which, per Group, is
+        the whole of "across Retainers" — and <b>displace a lower Slot Yield</b> is the setting
+        that lets the allocator work across the whole Player rather than one Retainer at a time.
+        <span class="unapproved">behaviour not approved</span></span></div>
+
+      <div class="sect">What a newly drawn space starts as</div>
+      ${row('Stock dropped into a granted slot is enrolled','Off means you enrol each Ware yourself.',true)}
+      ${row('Read slot count as intent','Many slots assigns a commodity Strategy, one slot a single-sale one. Overridable per Ware.',true)}
+      ${row('Take stock back out of the space when it stops selling','Frees the slot for something that will.',false)}
+      ${row('Warn before a plan change moves Listings','Applying a plan across six Retainers can move hundreds of them.',true)}`;
+
+  } else if (state.cfg === 'strategies') {
+    pane.innerHTML = `<div class="sect">Strategies</div>
+      <div class="muted" style="font-size:11.5px;margin-bottom:9px">
+        The Strategies themselves are edited in the main window, where you can see what they do.
+        What lives here is what happens when nothing has been chosen.</div>
+      <div class="cfg-row"><div class="lbl"><b>Strategy for a newly enrolled Ware</b>
+        <span>Before slot count or a Group says otherwise.</span></div>
+        <select class="btn"><option>From the game's Category</option><option>Fast Fungibles</option>
+          <option>Patient Ticket</option><option>Ask me each time</option></select></div>
+      <div class="cfg-row"><div class="lbl"><b>When a Ware has both</b>
+        <span>A Strategy set on the Ware itself beats the one its Group carries. Fixed.</span></div>
+        <span class="muted">Ware wins</span></div>
+      ${row('Refit the numbers daily','Per-type parameters are computed from your own World, not shipped as constants.',true)}
+      ${row('Warn before a Strategy change affects many Wares','A Group edit can move hundreds of Listings.',true)}
+      <div class="sect" style="margin-top:16px">How the two levels blend</div>
+      <div class="card" style="padding:10px 12px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px">
+          <span style="border:1px solid var(--border);border-radius:5px;padding:4px 10px">
+            <b>Retainer</b><br><span class="muted" style="font-size:11px">the overall Strategy</span></span>
+          <span class="muted">is overridden by</span>
+          <span style="border:1px solid var(--accent);border-radius:5px;padding:4px 10px;background:var(--accent-soft)">
+            <b>Group</b><br><span class="muted" style="font-size:11px">only where one is set</span></span>
+          <span class="muted">is overridden by</span>
+          <span style="border:1px solid var(--border);border-radius:5px;padding:4px 10px">
+            <b>Ware</b><br><span class="muted" style="font-size:11px">the last word</span></span>
+          <span style="flex:1"></span>
+          <span class="muted" style="font-size:11px">local beats global</span>
+        </div>
+        <div class="muted" style="font-size:11.5px;margin-top:9px">
+          <b>Every Group below starts at <i>Inherit</i></b>, so setting a Retainer's Strategy is
+          enough on its own. Pick a Strategy on a Group only where that Group should behave
+          differently from the rest of what its Retainer sells — the blend is the point, not an
+          exception to it.</div>
+      </div>
+
+      <div class="sect">Built-in Groups</div>
+      <div class="muted" style="font-size:11.5px;margin-bottom:5px">
+        The seven structural types, classified from game data alone — search category, stack size,
+        quality flag — so a Ware that has never traded still lands in one on install day.</div>
+      <div class="card" style="padding:4px 8px 8px"><table class="t">
+        <thead><tr><th>Group</th><th>Strategy</th><th>Effect</th><th class="r">Wares</th><th></th></tr></thead>
+        <tbody>${[['Materia',148],['Material',66],['Consumable',41],['Gear',84],
+                  ['Furnishing',52],['Collectible',18],['Miscellany',9]]
+          .map(g => `<tr><td>${esc(g[0])}</td>
+            <td><select class="btn"><option selected>Inherit from the Retainer</option>
+              ${STRATEGIES.map(x => `<option>${esc(x.name)}</option>`).join('')}</select></td>
+            <td class="muted">follows whatever the Retainer runs</td>
+            <td class="r num">${g[1]}</td>
+            <td class="r"><button class="btn ghost">Edit</button></td></tr>`).join('')}
+        </tbody></table></div>
+
+      <div class="sect" style="margin-top:14px">Your own Groups</div>
+      <div class="muted" style="font-size:11.5px;margin-bottom:5px">
+        A Group is any set of Wares you want treated alike. Add them by name, by Category, or by a
+        rule over the Value Sources. Leave the Strategy on <i>Inherit</i> unless the Group is the
+        reason you made it.</div>
+      <div class="card" style="padding:4px 8px 8px"><table class="t">
+        <thead><tr><th>Group</th><th>Made of</th><th>Strategy</th><th>Effect</th><th class="r">Wares</th><th></th></tr></thead>
+        <tbody>
+          <tr><td><b>High-value cosmetics</b></td>
+            <td class="muted"><code class="expr" style="display:inline;padding:1px 5px">estimate &gt; 500000</code> and Category is Minion, Mount or Orchestrion</td>
+            <td><select class="btn"><option>Inherit from the Retainer</option>
+              ${STRATEGIES.map((x,i) => `<option ${i===1?'selected':''}>${esc(x.name)}</option>`).join('')}</select></td>
+            <td style="color:var(--accent)">overrides on 14 Wares</td>
+            <td class="r num">14</td><td class="r"><button class="btn ghost">Edit</button></td></tr>
+          <tr><td><b>Raid week consumables</b></td>
+            <td class="muted">12 Wares, picked by hand</td>
+            <td><select class="btn"><option selected>Inherit from the Retainer</option>
+              ${STRATEGIES.map(x => `<option>${esc(x.name)}</option>`).join('')}</select></td>
+            <td class="muted">follows whatever the Retainer runs</td>
+            <td class="r num">12</td><td class="r"><button class="btn ghost">Edit</button></td></tr>
+        </tbody></table></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn primary">New Group</button>
+        <button class="btn">Add the Wares I have selected</button>
+      </div>
+      <div class="warnbox" style="margin-top:12px"><span class="ic">i</span>
+        <span>A Retainer running <i>Undercut to Sell Fast</i> can hold its chase items patiently
+        without changing anything else it sells — that is one Group override, and nothing more.
+        Where no Group sets a Strategy, there is nothing to reason about: the Retainer's Strategy
+        is what runs.</span></div>`;
+
+  } else {
+    pane.innerHTML = `<div class="sect">General</div>
+      ${row('Open EMM with the summoning bell','The common path: the window is already there when you need it.',true)}
+      ${row('Apply Proposals when I press Apply only','Off means EMM acts under the Mandates you granted.',true)}
+      ${row('Show the operational log in chat','One line per Retainer. Zeros are not suppressed.',true)}
+      ${row('Verbose log','Per-act derivations. Loud.',false)}
+      <div class="sect" style="margin-top:14px">The log line</div>
+      <code class="expr">[EMM] Bloodstained: 2 Sold, 4 Updated, 1 Newly Listed, 2 Hold (4 spaces free)</code>
+      <div class="muted" style="font-size:11px;margin-top:6px">
+        Sold is retrospective — what happened since the last visit. The rest is this visit's acts.</div>
+
+      <div class="sect" style="margin-top:16px">Discord <span class="pill" style="background:var(--accent-soft);color:var(--accent)">v0.2</span></div>
+      <div class="muted" style="font-size:11.5px;margin-bottom:4px">
+        Reach you when the game is not open: what sold, what EMM is holding and why, and anything
+        that made it stop.</div>
+      <div class="cfg-row"><div class="lbl"><b>Connect a Discord account</b>
+        <span>One webhook to a channel of your own, or a direct message.</span></div>
+        <button class="btn" disabled>Connect…</button></div>
+      ${row('Daily digest','What sold, what it earned, what is still sitting.',false)}
+      ${row('Guardrail trips','EMM suspended itself. The one thing worth waking you for.',false)}
+      ${row('Acted on a figure the data does not back','The same event that raises the in-game toast.',false)}
+      ${row('Ask me before acting','A message you reply to, so a Proposal can be approved away from the game.',false)}
+      <div class="warnbox" style="margin-top:10px"><span class="ic">i</span>
+        <span><b>Deferred to v0.2 on purpose, and stated here so the shape is agreed early.</b> It
+        sends outward, which is a different kind of trust from anything else EMM does — replying
+        to approve an act would let a Discord message move gil, so that switch is off, last, and
+        will want its own thinking.<span class="unapproved">not designed</span></span></div>`;
+  }
+}
+
+/* ==========================================================================
+   Scenes + wiring
+   ========================================================================== */
+function renderBell() {
+  const rets = D.characters[0].retainers;
+  document.getElementById('bellRows').innerHTML = rets.map((r,i) => {
+    const s = D.space[r.name];
+    return `<div class="game-row ${i===0?'sel':''}">
+      <span>${esc(r.name)}</span>
+      <span class="sub">${s.occupied} items for sale</span></div>`;
+  }).join('') + `<div class="game-row"><span>Entrust items</span></div>
+    <div class="game-row"><span>Quit</span></div>`;
+}
+
+/* Scene 4: the Retainer's own two windows. The inventory is what gets marked; the
+   sell list is shown beside it because it is the consequence of the marking. */
+function renderSellWindow() {
+  const all = D.proposals.slice();
+
+  // the sell list — icons, as the game shows it, not text labels
+  const rows = [];
+  for (let i = 0; i < 20; i++) {
+    const p = all[i % all.length];
+    const w = wareByKey[p.ware];
+    const t = TYPE_ICON[w.type] || TYPE_ICON.Miscellany;
+    rows.push(i < 13
+      ? `<div class="game-row">
+           <span style="display:flex;align-items:center;gap:7px;min-width:0">
+             <span style="width:20px;height:20px;flex:0 0 auto;border-radius:3px;display:flex;
+               align-items:center;justify-content:center;font-size:12px;color:${t.c};
+               background:linear-gradient(150deg,${t.c}44,${t.c}18);border:1px solid ${t.c}66;
+               filter:brightness(1.35)">${t.g}</span>
+             <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(w.name)}${p.stack>1?' ×'+p.stack:''}</span>
+           </span>
+           <span class="sub num">${gil(p.from || w.minListing || w.est.point)} gil</span></div>`
+      : `<div class="game-row"><span class="sub">—</span></div>`);
+  }
+  document.getElementById('sellRows').innerHTML = rows.join('');
+
+  // the inventory page tabs, as the game draws them — clickable, like the game's
+  const gp = state.gamePage || 0;
+  document.getElementById('gamePages').innerHTML =
+    Array.from({length:PAGES}, (_,p) => `<button data-gamepage="${p}" style="flex:1;text-align:center;
+      font-size:11px;padding:2px 0;border-radius:3px;cursor:pointer;
+      border:1px solid rgba(160,175,205,${p===gp?'0.5':'0.2'});
+      background:${p===gp?'rgba(224,182,74,0.14)':'transparent'};
+      color:${p===gp?'#e8dcb6':'#98a3b8'}">${p+1}</button>`).join('');
+  document.querySelectorAll('[data-gamepage]').forEach(b =>
+    b.onclick = () => { state.gamePage = +b.dataset.gamepage; renderSellWindow(); });
+
+  // Bloodstained's stock on the selected page, drawn with the tab's icon tiles
+  const inv = inventoryOf('Bloodstained');
+  document.getElementById('invGrid').innerHTML =
+    Array.from({length:PER_PAGE}, (_,i) => {
+      const e = inv[gp * PER_PAGE + i];
+      if (!e) return `<div style="aspect-ratio:1;border:1px solid rgba(160,175,205,0.18);border-radius:3px"></div>`;
+      const w = wareByKey[e.ware];
+      const t = TYPE_ICON[w.type] || TYPE_ICON.Miscellany;
+      return `<div style="position:relative;aspect-ratio:1;border-radius:3px;display:flex;
+        align-items:center;justify-content:center;font-size:17px;color:${t.c};
+        border:1px solid ${t.c}66;background:linear-gradient(150deg,${t.c}4d,${t.c}1a);
+        filter:brightness(1.3)" title="${esc(w.name)}">${t.g}
+        ${w.hq ? '<em style="position:absolute;top:0;left:2px;font-size:8px;color:#ffd98a">✦</em>' : ''}
+        ${e.qty > 1 ? `<em style="position:absolute;bottom:-1px;right:2px;font-size:8.5px;
+           font-weight:700;color:#fff;text-shadow:0 1px 2px #000">${e.qty}</em>` : ''}</div>`;
+    }).join('');
+}
+
+function setScene(s) {
+  state.scene = s;
+  document.getElementById('sc-main').classList.toggle('on', s==='bell'||s==='float'||s==='firstrun');
+  document.getElementById('sc-space').classList.toggle('on', s==='space');
+  document.getElementById('sc-config').classList.toggle('on', s==='config');
+  document.getElementById('toast-sev').hidden = !(s === 'bell' || s === 'float');
+
+  const main = document.getElementById('mainWin');
+  const bell = document.getElementById('bellWin');
+  const note = document.getElementById('dockNote');
+  const strip = document.getElementById('rstrip');
+  const expandBtn = document.getElementById('btnExpand');
+
+  if (s === 'bell' || s === 'firstrun') {
+    /* Docked: the window matches the retainer list's height, which is short. Expanding
+       grows it past the game window; the dock and the anchor survive either way. */
+    bell.style.display = '';
+    main.style.left = '368px'; main.style.top = '104px';
+    main.style.width = state.expanded ? '834px' : '470px';
+    main.style.height = state.expanded ? '556px' : bell.offsetHeight + 'px';
+    note.textContent = state.expanded
+      ? 'docked · expanded past the Retainer list'
+      : 'docked · right of Retainer · matching its height';
+    // During setup, Setup is the only way forward — Details would open an empty workspace.
+    expandBtn.hidden = (s === 'firstrun');
+    expandBtn.innerHTML = state.expanded ? '⤡' : '⤢ Details';
+    expandBtn.classList.toggle('is-open', state.expanded);
+    expandBtn.title = state.expanded ? 'Back to the summary strip' : 'Expand into the full workspace';
+    stage.dataset.collapsed = state.expanded ? '0' : '1';
+  } else if (s === 'float') {
+    /* Screen space is a real constraint, so the free window is not one fixed size:
+       three steps plus a drag grip, and whatever it ends at is remembered. */
+    bell.style.display = 'none';
+    const SIZES = {default:[1006,628], large:[1180,742], full:[stage.clientWidth-40, stage.clientHeight-40]};
+    const [wpx, hpx] = SIZES[state.size] || SIZES.default;
+    main.style.left = state.size === 'full' ? '20px' : '150px';
+    main.style.top = state.size === 'full' ? '20px' : '70px';
+    main.style.width = wpx + 'px'; main.style.height = hpx + 'px';
+    note.textContent = 'free · moveable · resizable · remembers position';
+    expandBtn.hidden = true;
+    stage.dataset.collapsed = '0';
+  }
+  const compact = (s === 'bell' || s === 'firstrun') && !state.expanded;
+
+  /* Minimised collapses to the title bar in place — the window never disappears, and the
+     pending count moves into the title so the collapsed state still says something. */
+  stage.dataset.min = state.minimised ? '1' : '0';
+  const tc = document.getElementById('titleCount');
+  tc.hidden = !state.minimised;
+  tc.textContent = D.proposals.filter(p => !p.hold).length + ' to do';
+  document.getElementById('btnMin').textContent = state.minimised ? '▢' : '—';
+  document.getElementById('btnMin').title =
+    state.minimised ? 'Restore' : 'Minimise to the title bar';
+  /* The grip belongs to any window you can see, not only the free one — a docked window
+     that has been expanded is exactly where you want to drag it bigger. */
+  document.getElementById('mainGrip').style.display =
+    (state.minimised || compact) ? 'none' : '';
+  stage.dataset.compact = compact ? '1' : '0';
+  if (compact) { state.tab = 'tasks'; main.style.width = '408px'; }
+  // Sell Space lists Retainers down its left edge, and Scan is Player-wide — neither wants the strip.
+  strip.style.display = (compact || state.tab === 'space' || state.tab === 'scan') ? 'none' : '';
+  document.getElementById('status').style.display =
+    (s === 'bell' || s === 'float' || s === 'firstrun') && stage.dataset.status !== '0' ? '' : 'none';
+
+  const foot = document.querySelector('#sc-main .content-foot');
+  stage.dataset.setup = (s === 'firstrun') ? '1' : '0';
+  if (s === 'firstrun') {
+    state.tab = 'tasks'; renderNav(); renderFirstRun();
+    strip.style.display = 'none';
+    foot.style.display = 'none';
+    if (state.expanded) { main.style.height = '560px'; main.style.width = '834px'; }
+    document.getElementById('status').style.display = 'none';
+    // The workspace rail is greyed during setup — but only the workspace rail, and only
+    // while setup is on screen. Leaving it must hand the navigation back.
+    stage.querySelectorAll('#railItems .nav-item').forEach(b => {
+      b.disabled = true; b.style.opacity = .45;
+    });
+    stage.querySelectorAll('.nav-item .badge').forEach(b => b.remove());
+  } else {
+    stage.querySelectorAll('.nav-item').forEach(b => { b.disabled = false; b.style.opacity = ''; });
+    foot.style.display = compact ? 'none' : '';
+    renderPanes();
+  }
+}
+
+function renderRetainerStrip() {
+  const rets = D.characters
+    .filter(c => state.character === '*' || c.name === state.character)
+    .flatMap(c => c.retainers);
+  const tot = rets.reduce((s,r) => s + D.space[r.name].postings, 0);
+  const occ = rets.reduce((s,r) => s + D.space[r.name].occupied, 0);
+  document.getElementById('rstrip').innerHTML =
+    `<button class="rchip" data-r="*" aria-pressed="${state.retainer==='*'}">
+      <span class="rn">All Retainers</span><span class="rs num">${occ}/${tot} postings</span>
+      <span class="cap"><i style="width:${occ/tot*100}%"></i></span></button>` +
+    rets.map(r => {
+      const s = D.space[r.name];
+      const pend = D.proposals.filter(p => p.retainer===r.name && !p.hold).length;
+      return `<button class="rchip" data-r="${r.name}" aria-pressed="${state.retainer===r.name}">
+        <span class="rn">${esc(r.name)}${pend?` <em class="badge">${pend}</em>`:''}</span>
+        <span class="rs num">${s.occupied}/${s.postings} postings</span>
+        <span class="cap"><i class="${s.occupied>=s.postings?'full':''}" style="width:${s.occupied/s.postings*100}%"></i></span>
+      </button>`;
+    }).join('');
+  document.querySelectorAll('[data-r]').forEach(b =>
+    b.onclick = () => { state.retainer = b.dataset.r; state.grantedSlots = null; renderAll(); });
+}
+
+/* Show a fade at the foot of a pane that has more below it, and keep it clear of the
+   footer. Without it the last row is sliced off with nothing to say why. */
+function updateScrollCue() {
+  const cue = document.getElementById('scrollCue');
+  const pane = document.querySelector('#sc-main .pane.on');
+  const foot = document.querySelector('#sc-main .content-foot');
+  if (!cue || !pane) return;
+  const footH = (foot && getComputedStyle(foot).display !== 'none') ? foot.offsetHeight : 0;
+  cue.style.bottom = footH + 'px';
+  const more = pane.scrollHeight - pane.clientHeight - pane.scrollTop > 6;
+  cue.classList.toggle('show', more);
+}
+
+function renderPanes() {
+  if (state.scene === 'firstrun') { requestAnimationFrame(updateScrollCue); return; }
+  const strip = document.getElementById('rstrip');
+  const compact = (state.scene === 'bell' || state.scene === 'firstrun') && !state.expanded;
+  strip.style.display =
+    (compact || state.tab === 'space' || state.tab === 'scan') ? 'none' : '';
+  if (state.tab === 'tasks') renderTasks();
+  if (state.tab === 'pricing') renderPricing();
+  if (state.tab === 'space') renderSpace();
+  if (state.tab === 'holdings') renderHoldings();
+  if (state.tab === 'strategies') renderStrategies();
+  if (state.tab === 'scan') renderScan();
+  wireLiveControls(document.querySelector('#sc-main .pane.on') || document);
+  if (typeof applyBreakpoints === 'function') applyBreakpoints();
+  requestAnimationFrame(updateScrollCue);
+}
+
+function renderAll() {
+  renderNav(); renderRetainerStrip(); renderPanes();
+}
+
+/* --- wiring --------------------------------------------------------------- */
+document.getElementById('sceneSel').onchange = e => setScene(e.target.value);
+document.getElementById('scopeSel').onchange = e => {
+  state.character = e.target.value; state.retainer = '*'; state.grantedSlots = null; renderAll();
+};
+document.getElementById('btnConfig').onclick = () => {
+  document.getElementById('sceneSel').value = 'config'; setScene('config');
+};
+document.getElementById('btnExpand').onclick = () => {
+  state.expanded = !state.expanded; setScene(state.scene);
+};
+document.getElementById('btnSize').onclick = () => {
+  const order = ['default', 'large', 'full'];
+  state.size = order[(order.indexOf(state.size) + 1) % order.length];
+  if (state.scene !== 'float') { document.getElementById('sceneSel').value = 'float'; setScene('float'); }
+  else setScene('float');
+};
+document.getElementById('btnMin').onclick = () => {
+  state.minimised = !state.minimised; setScene(state.scene);
+};
+document.getElementById('btnClose').onclick = () => {
+  // Closing leaves the status strip, which is how you get the window back.
+  state.minimised = true; stage.dataset.status = '1';
+  [...document.querySelectorAll('#statusSeg button')].forEach(x =>
+    x.setAttribute('aria-pressed', x.dataset.status === '1'));
+  setScene(state.scene);
+};
+document.getElementById('btnStatusOpen').onclick = () => {
+  state.minimised = false; setScene(state.scene);
+};
+document.getElementById('btnStatusHide').onclick = () => {
+  stage.dataset.status = '0';
+  [...document.querySelectorAll('#statusSeg button')].forEach(x =>
+    x.setAttribute('aria-pressed', x.dataset.status === '0'));
+  setScene(state.scene);
+};
+
+/* Drag the grip to resize, so the "is this big enough?" question can be answered by
+   dragging rather than argued about. */
+(() => {
+  const grip = document.getElementById('mainGrip'), main = document.getElementById('mainWin');
+  let from = null;
+  grip.addEventListener('mousedown', e => {
+    from = {x:e.clientX, y:e.clientY, w:main.offsetWidth, h:main.offsetHeight};
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', e => {
+    if (!from) return;
+    main.style.width  = Math.max(360, from.w + e.clientX - from.x) + 'px';
+    main.style.height = Math.max(220, from.h + e.clientY - from.y) + 'px';
+  });
+  window.addEventListener('mouseup', () => { if (from) { from = null; renderPanes(); } });
+})();
+document.getElementById('btnCollapse').onclick = () => {
+  stage.dataset.collapsed = stage.dataset.collapsed === '1' ? '0' : '1';
+  document.getElementById('btnCollapse').textContent = stage.dataset.collapsed === '1' ? '››' : '‹‹';
+};
+document.getElementById('themeSeg').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  document.body.dataset.theme = b.dataset.theme;
+  [...e.currentTarget.children].forEach(x => x.setAttribute('aria-pressed', x === b));
+  renderPanes();
+};
+document.getElementById('statusSeg').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  stage.dataset.status = b.dataset.status;
+  [...e.currentTarget.children].forEach(x => x.setAttribute('aria-pressed', x === b));
+  setScene(state.scene);
+};
+document.getElementById('globalSearch').oninput = e => {
+  state.search = e.target.value.toLowerCase(); renderPanes();
+  document.getElementById('globalSearch').focus();
+};
+document.getElementById('freshness').textContent =
+  'Cactuar · Freshness ' + ageText(Math.max(...D.wares.map(w => w.lastUpload)));
+
+/* deep links: #scene=pricing&nav=tabs&theme=light */
+const hash = new URLSearchParams(location.hash.slice(1));
+if (hash.get('theme')) document.body.dataset.theme = hash.get('theme');
+if (hash.get('expanded')) state.expanded = hash.get('expanded') === '1';
+if (hash.get('cfg')) state.cfg = hash.get('cfg');
+if (hash.get('min')) state.minimised = hash.get('min') === '1';
+if (hash.get('size')) state.size = hash.get('size');
+if (hash.get('tab')) state.tab = hash.get('tab');
+if (hash.get('hover')) state.hovered = hash.get('hover');
+if (hash.get('retainer')) state.retainer = hash.get('retainer');
+[...document.querySelectorAll('#themeSeg button')].forEach(b =>
+  b.setAttribute('aria-pressed', b.dataset.theme === (document.body.dataset.theme||'dark')));
+
+renderBell(); renderSellWindow(); renderConfig(); renderAll();
+const scene0 = hash.get('scene') || 'bell';
+document.getElementById('sceneSel').value = scene0;
+setScene(scene0);
+window.addEventListener('resize', () => renderPanes());
+
+/* ==========================================================================
+   Live controls
+
+   A prototype that decisions get made from must not have dead clicks: a control
+   that does nothing reads as a control that does not work. Everything either acts,
+   or says out loud that it is not built.
+   ========================================================================== */
+document.addEventListener('scroll', updateScrollCue, true);
+
+/* The window can be dragged to any width, so the layout is driven by the content area's
+   own size rather than the viewport's. Two breakpoints, applied as data attributes. */
+function applyBreakpoints() {
+  document.querySelectorAll('#sc-main .content, #sc-config .content').forEach(c => {
+    const w = c.clientWidth;
+    c.dataset.narrow = w < 720 ? '1' : '0';
+    c.dataset.mid = (w >= 720 && w < 940) ? '1' : '0';
+  });
+}
+if (window.ResizeObserver) {
+  const ro = new ResizeObserver(() => { applyBreakpoints(); updateScrollCue(); });
+  document.querySelectorAll('#sc-main .content, #sc-config .content').forEach(c => ro.observe(c));
+}
+applyBreakpoints();
+
+/* Every toggle switch actually toggles. */
+document.addEventListener('click', e => {
+  const sw = e.target.closest('.sw');
+  if (!sw) return;
+  sw.setAttribute('aria-pressed', sw.getAttribute('aria-pressed') !== 'true');
+});
+
+/* Anything still unbuilt says so rather than swallowing the click. */
+function flashNotBuilt(btn) {
+  if (btn.dataset.flashing) return;
+  btn.dataset.flashing = '1';
+  const label = btn.textContent;
+  btn.textContent = 'not built in the prototype';
+  btn.style.opacity = '.65';
+  setTimeout(() => {
+    btn.textContent = label; btn.style.opacity = ''; delete btn.dataset.flashing;
+  }, 1100);
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b || b.disabled) return;
+  if (b.onclick || b.dataset.live || b.closest('#proto')) return;
+  if (b.matches('.sw, .nav-item, .rchip, .pagetab, .itile, .slot, .win-btn, .wrow, [data-invslot], [data-gamepage], [data-page], [data-space], [data-r], [data-cfg], [data-tab], [data-hover]')) return;
+  flashNotBuilt(b);
+});
+
+/* --- the ones that do act ------------------------------------------------- */
+function wireLiveControls(root) {
+  root.querySelectorAll('[data-live]').forEach(b => {
+    if (b.dataset.wired) return;
+    b.dataset.wired = '1';
+    b.addEventListener('click', () => LIVE[b.dataset.live] && LIVE[b.dataset.live](b));
+  });
+}
+
+const LIVE = {
+  apply(btn) {
+    const done = visibleProposals().filter(p => !p.hold &&
+      state.accepted.has(p.ware + '|' + p.retainer));
+    if (!done.length) return;
+    done.forEach(p => state.applied.add(p.ware + '|' + p.retainer));
+    document.getElementById('footLog').textContent =
+      `[EMM] Applied ${done.length}: ${done.filter(p => p.act === 'Reprice').length} Updated, ` +
+      `${done.filter(p => p.act === 'List').length} Newly Listed`;
+    renderNav(); renderPanes();
+  },
+  why(btn) {
+    const box = document.getElementById('whyOrder');
+    if (box) box.hidden = !box.hidden;
+    updateScrollCue();
+  },
+  showWhy(btn) {
+    const box = btn.closest('.card').querySelector('.whybox');
+    if (box) box.hidden = !box.hidden;
+    updateScrollCue();
+  },
+  refresh(btn) {
+    const bar = document.getElementById('scanBar');
+    const st = document.getElementById('scanState');
+    if (!bar || btn.dataset.running) return;
+    btn.dataset.running = '1'; st.className = 'sev caution'; st.textContent = 'scanning';
+    let p = 0;
+    const tick = () => {
+      p += 7 + Math.random() * 9;
+      bar.style.width = Math.min(100, p) + '%';
+      if (p < 100) setTimeout(tick, 90);
+      else {
+        st.className = 'sev ok'; st.textContent = 'up to date';
+        delete btn.dataset.running;
+        setTimeout(() => { bar.style.width = '0%'; }, 700);
+      }
+    };
+    tick();
+  },
+  pauseBackfill(btn) {
+    const on = btn.dataset.paused === '1';
+    btn.dataset.paused = on ? '0' : '1';
+    btn.textContent = on ? 'Pause' : 'Resume';
+  },
+  wizardFinish() {
+    state.setupDone = true; state.expanded = true;
+    document.getElementById('sceneSel').value = 'bell';
+    setScene('bell');
+  },
+};
+
+/* ==========================================================================
+   Self-test — open with #selftest=1
+
+   A prototype nobody clicks through is a prototype with broken navigation, which
+   is exactly what happened twice. This drives every control the UI exposes and
+   reports what did not work, rather than relying on someone noticing.
+   ========================================================================== */
+function runSelfTest() {
+  const R = [];
+
+  /* The report is built up as the run goes, not at the end — the first version put it
+     together afterwards, so when the harness itself threw there was nothing on screen
+     at all and no way to see how far it got. */
+  const panel = document.createElement('div');
+  panel.style.cssText = `position:fixed;inset:0;z-index:9999;overflow:auto;padding:22px 26px;
+    background:#0b0f16;color:#e9ecf3;font:12.5px/1.55 "Segoe UI",system-ui,sans-serif`;
+  panel.innerHTML = `<div style="font-size:17px;font-weight:600;margin-bottom:3px">
+      EMM prototype — navigation self-test</div>
+    <div id="stHead" style="margin-bottom:14px;color:#8b97ac">running…</div>
+    <table style="border-collapse:collapse;width:100%;max-width:940px"><tbody id="stBody"></tbody></table>`;
+  document.body.appendChild(panel);
+  const body = panel.querySelector('#stBody');
+
+  const ok = (name, cond, detail) => {
+    R.push({name, pass: !!cond, detail: detail || ''});
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid #1e2635';
+    tr.innerHTML =
+      `<td style="padding:4px 10px 4px 0;width:22px;color:${cond?'#3fb950':'#e2726c'}">${cond?'✓':'✕'}</td>
+       <td style="padding:4px 10px 4px 0">${name}</td>
+       <td style="padding:4px 0;color:#8b97ac">${detail || ''}</td>`;
+    body.appendChild(tr);
+  };
+  // A step passes only on `true`/undefined. A returned string is a failure and its reason.
+  const step = (name, fn) => {
+    try {
+      const d = fn();
+      if (typeof d === 'string') ok(name, false, d);
+      else ok(name, d !== false);
+    } catch (e) { ok(name, false, 'threw: ' + e.message); }
+  };
+  const qa = s => [...document.querySelectorAll(s)];
+  const paneFilled = id => {
+    const p = document.getElementById('pane-' + id);
+    return p && p.classList.contains('on') && p.textContent.trim().length > 120;
+  };
+  const canvasHasInk = cv => {
+    if (!cv || !cv.width) return false;
+    const d = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    for (let i = 3; i < d.length; i += 40) if (d[i] > 8) return true;
+    return false;
+  };
+
+  // --- scenes ---------------------------------------------------------------
+  ['bell','float','firstrun','space','config'].forEach(s =>
+    step('scene: ' + s, () => {
+      document.getElementById('sceneSel').value = s; setScene(s);
+      const map = {bell:'sc-main', float:'sc-main', firstrun:'sc-main',
+                   space:'sc-space', config:'sc-config'};
+      return document.getElementById(map[s]).classList.contains('on');
+    }));
+
+  // --- tabs -----------------------------------------------------------------
+  state.expanded = true; setScene('float');
+  TABS.forEach(t => step('tab: ' + t.id, () => {
+    const b = qa('.nav-item[data-tab]').find(x => x.dataset.tab === t.id);
+    if (!b) return false;
+    b.click();
+    return paneFilled(t.id) || ('pane empty (' +
+      document.getElementById('pane-' + t.id).textContent.trim().length + ' chars)');
+  }));
+
+  // --- charts actually drew --------------------------------------------------
+  step('pricing: chart drew', () => {
+    qa('.nav-item[data-tab]').find(x => x.dataset.tab === 'pricing').click();
+    const cv = document.querySelector('canvas.big');
+    return canvasHasInk(cv) || 'canvas blank';
+  });
+  step('pricing: sparklines drew', () => {
+    const cvs = qa('[data-spark]');
+    return cvs.length ? (cvs.some(canvasHasInk) || 'all sparklines blank')
+                      : 'no sparkline canvases';
+  });
+  step('pricing: hover flips the card', () => {
+    const rows = qa('[data-hover]');
+    if (rows.length < 2) return 'need 2 rows, got ' + rows.length;
+    const before = state.hovered;
+    rows[1].dispatchEvent(new MouseEvent('mouseenter'));
+    return state.hovered !== before;
+  });
+
+  // --- retainer strip + scope ------------------------------------------------
+  step('retainer strip: does not wrap', () => {
+    qa('.nav-item[data-tab]').find(x => x.dataset.tab === 'tasks').click();
+    const s = document.getElementById('rstrip');
+    return getComputedStyle(s).flexWrap === 'nowrap';
+  });
+  step('retainer chips filter', () => {
+    const chips = qa('[data-r]');
+    if (chips.length < 2) return 'no chips';
+    chips[1].click();
+    const rn = state.retainer;
+    const rows = qa('#pane-tasks .qrow[data-w]').length;
+    chips[0].click();
+    const all = qa('#pane-tasks .qrow[data-w]').length;
+    return (rn !== '*' && rows <= all) || ('filter did nothing: ' + rows + ' vs ' + all);
+  });
+  step('scope select filters', () => {
+    const sel = document.getElementById('scopeSel');
+    sel.value = 'Wren Halloway'; sel.dispatchEvent(new Event('change'));
+    const few = qa('[data-r]').length;
+    sel.value = '*'; sel.dispatchEvent(new Event('change'));
+    const many = qa('[data-r]').length;
+    return few < many || ('no change: ' + few + ' vs ' + many);
+  });
+  step('strip hidden on Sell Space and Scan', () => {
+    const s = document.getElementById('rstrip');
+    qa('.nav-item[data-tab]').find(x => x.dataset.tab === 'space').click();
+    const a = s.style.display === 'none';
+    qa('.nav-item[data-tab]').find(x => x.dataset.tab === 'scan').click();
+    const b = s.style.display === 'none';
+    qa('.nav-item[data-tab]').find(x => x.dataset.tab === 'tasks').click();
+    const c = s.style.display !== 'none';
+    return (a && b && c) || `space=${a} scan=${b} restored=${c}`;
+  });
+
+  // --- search ---------------------------------------------------------------
+  step('search filters the queue', () => {
+    const i = document.getElementById('globalSearch');
+    const before = qa('#pane-tasks .qrow[data-w]').length;
+    i.value = 'materia'; i.dispatchEvent(new Event('input'));
+    const after = qa('#pane-tasks .qrow[data-w]').length;
+    i.value = ''; i.dispatchEvent(new Event('input'));
+    return after < before || `no change: ${before} → ${after}`;
+  });
+
+  // --- window controls -------------------------------------------------------
+  step('rail collapses', () => {
+    const before = stage.dataset.collapsed;
+    document.getElementById('btnCollapse').click();
+    const after = stage.dataset.collapsed;
+    document.getElementById('btnCollapse').click();
+    return before !== after;
+  });
+  step('size cycles default → large → full', () => {
+    const seen = [];
+    for (let i = 0; i < 3; i++) { document.getElementById('btnSize').click(); seen.push(state.size); }
+    return new Set(seen).size === 3 || seen.join(',');
+  });
+  step('minimise collapses to the title bar', () => {
+    state.size = 'default'; setScene('float');
+    const full = document.getElementById('mainWin').offsetHeight;
+    document.getElementById('btnMin').click();
+    const min = document.getElementById('mainWin').offsetHeight;
+    const bodyGone = getComputedStyle(document.querySelector('#mainWin .emm-body')).display === 'none';
+    document.getElementById('btnMin').click();
+    const back = document.getElementById('mainWin').offsetHeight;
+    return (min < full && min > 20 && bodyGone && back === full)
+      || `full=${full} min=${min} bodyGone=${bodyGone} restored=${back}`;
+  });
+  step('close then reopen from the status strip', () => {
+    document.getElementById('btnClose').click();
+    const closed = state.minimised;
+    document.getElementById('btnStatusOpen').click();
+    return (closed && !state.minimised) || `closed=${closed} reopened=${!state.minimised}`;
+  });
+  step('status strip hides', () => {
+    document.getElementById('btnStatusHide').click();
+    const hidden = document.getElementById('status').style.display === 'none';
+    stage.dataset.status = '1'; setScene(state.scene);
+    return hidden;
+  });
+  step('expand toggles the docked window', () => {
+    state.expanded = false; setScene('bell');
+    const small = document.getElementById('mainWin').offsetHeight;
+    document.getElementById('btnExpand').click();
+    const big = document.getElementById('mainWin').offsetHeight;
+    return big > small || `${small} → ${big}`;
+  });
+  step('settings button opens the config window', () => {
+    document.getElementById('btnConfig').click();
+    return document.getElementById('sc-config').classList.contains('on');
+  });
+
+  // --- config nav ------------------------------------------------------------
+  const seenCfg = new Set();
+  CFG.forEach(c => step('settings page: ' + c.id, () => {
+    const b = qa('[data-cfg]').find(x => x.dataset.cfg === c.id);
+    if (!b) return false;
+    b.click();
+    const txt = document.getElementById('pane-cfg').textContent.trim();
+    if (txt.length < 80) return 'page empty';
+    const key = txt.slice(0, 60);
+    if (seenCfg.has(key)) return 'duplicate of another page';
+    seenCfg.add(key);
+    return true;
+  }));
+  step('no black text on a dark surface', () => {
+    document.body.dataset.theme = 'dark';
+    const bad = qa('#pane-cfg select, #pane-cfg input, #pane-cfg option')
+      .filter(el => {
+        const c = getComputedStyle(el).color;
+        const m = c.match(/\d+/g);
+        return m && +m[0] < 90 && +m[1] < 90 && +m[2] < 90;
+      });
+    return bad.length === 0 || bad.length + ' dark-on-dark controls';
+  });
+
+  // --- setup wizard ----------------------------------------------------------
+  step('first run: Setup button expands into the wizard', () => {
+    state.expanded = false; state.setupStep = 0;
+    document.getElementById('sceneSel').value = 'firstrun'; setScene('firstrun');
+    const btn = document.getElementById('btnSetup');
+    if (!btn) return 'no Setup button';
+    btn.click();
+    return !!document.querySelector('.wiz') || 'wizard did not open';
+  });
+  step('wizard: forward through every step', () => {
+    const seen = [state.setupStep];
+    for (let i = 0; i < SETUP_STEPS.length - 1; i++) {
+      document.getElementById('wizNext').click(); seen.push(state.setupStep);
+    }
+    return seen.length === SETUP_STEPS.length && state.setupStep === SETUP_STEPS.length - 1
+      || seen.join(',');
+  });
+  step('wizard: back to the start', () => {
+    for (let i = 0; i < SETUP_STEPS.length - 1; i++) document.getElementById('wizBack').click();
+    return state.setupStep === 0 || 'stuck at ' + state.setupStep;
+  });
+
+  // --- sell space ------------------------------------------------------------
+  step('sell space: page tabs change the grid', () => {
+    state.expanded = true;
+    document.getElementById('sceneSel').value = 'float'; setScene('float');
+    qa('.nav-item[data-tab]').find(x => x.dataset.tab === 'space').click();
+    const tabs = qa('[data-page]');
+    if (tabs.length !== PAGES) return 'expected ' + PAGES + ' page tabs, got ' + tabs.length;
+    const before = document.querySelector('.invgrid').innerHTML;
+    tabs[3].click();
+    const after = document.querySelector('.invgrid').innerHTML;
+    tabs[0].click();
+    return before !== after || 'grid identical across pages';
+  });
+  step('sell space: a slot toggles', () => {
+    const slot = document.querySelector('[data-invslot]');
+    const i = +slot.dataset.invslot;
+    const before = state.grantedSlots.has(i);
+    slot.click();
+    const after = state.grantedSlots.has(i);
+    slot.click();
+    return before !== after;
+  });
+  step('sell space: shift-click marks a range', () => {
+    const slots = qa('[data-invslot]');
+    state.grantedSlots.clear(); state.lastSlot = null;
+    slots[2].click();
+    slots[8].dispatchEvent(new MouseEvent('click', {shiftKey:true, bubbles:true}));
+    const n = state.grantedSlots.size;
+    return n >= 6 || 'range marked only ' + n;
+  });
+  step('sell space: retainer list switches', () => {
+    const chips = qa('[data-space]');
+    if (chips.length < 2) return 'no retainer chips';
+    chips[1].click();
+    return state.retainer === chips[1].dataset.space;
+  });
+  step('scene 4: inventory page tabs work', () => {
+    document.getElementById('sceneSel').value = 'space'; setScene('space');
+    const tabs = qa('[data-gamepage]');
+    if (tabs.length !== PAGES) return 'expected ' + PAGES + ', got ' + tabs.length;
+    const before = document.getElementById('invGrid').innerHTML;
+    tabs[2].click();
+    const after = document.getElementById('invGrid').innerHTML;
+    tabs[0].click();
+    return before !== after || 'grid identical across pages';
+  });
+
+  // --- theme -----------------------------------------------------------------
+  step('theme toggles both ways', () => {
+    const segs = qa('#themeSeg button');
+    segs[1].click(); const light = document.body.dataset.theme === 'light';
+    segs[0].click(); const dark = document.body.dataset.theme === 'dark';
+    return (light && dark) || `light=${light} dark=${dark}`;
+  });
+  step('charts draw in light theme too', () => {
+    qa('#themeSeg button')[1].click();
+    state.expanded = true;
+    document.getElementById('sceneSel').value = 'float'; setScene('float');
+    qa('.nav-item[data-tab]').find(x => x.dataset.tab === 'pricing').click();
+    const ink = canvasHasInk(document.querySelector('canvas.big'));
+    qa('#themeSeg button')[0].click();
+    return ink || 'light-theme chart blank';
+  });
+
+  // --- layout: nothing clipped, nothing overflowing --------------------------
+  const layoutStates = [
+    ['docked, expanded', () => { state.expanded = true; state.size='default';
+      document.getElementById('sceneSel').value='bell'; setScene('bell'); }],
+    ['free, default',    () => { state.size='default';
+      document.getElementById('sceneSel').value='float'; setScene('float'); }],
+    ['free, fill screen',() => { state.size='full'; setScene('float'); }],
+  ];
+  layoutStates.forEach(([label, go]) => {
+    TABS.forEach(t => step(`no clipping — ${label} · ${t.id}`, () => {
+      go();
+      const b = qa('.nav-item[data-tab]').find(x => x.dataset.tab === t.id);
+      b.click();
+      applyBreakpoints();
+      const pane = document.getElementById('pane-' + t.id);
+      const pr = pane.getBoundingClientRect();
+      // Every rendered block must either sit inside the pane or be reachable by scrolling.
+      const overflowing = [...pane.querySelectorAll(':scope > *')].filter(el => {
+        const r = el.getBoundingClientRect();
+        if (r.width === 0 && r.height === 0) return false;   // hidden blocks measure as 0,0
+        return r.right > pr.right + 2 || r.left < pr.left - 2;
+      });
+      if (overflowing.length) return overflowing.length + ' blocks wider than the pane';
+      if (pane.scrollWidth > pane.clientWidth + 2)
+        return `horizontal overflow ${pane.scrollWidth} > ${pane.clientWidth}`;
+      return true;
+    }));
+  });
+  step('the window itself never scrolls sideways', () => {
+    const w = document.getElementById('mainWin');
+    return w.scrollWidth <= w.clientWidth + 2 || `${w.scrollWidth} > ${w.clientWidth}`;
+  });
+  step('a scrollable pane shows the scroll cue', () => {
+    state.size = 'default'; state.expanded = true;
+    document.getElementById('sceneSel').value = 'bell'; setScene('bell');
+    qa('.nav-item[data-tab]').find(x => x.dataset.tab === 'tasks').click();
+    updateScrollCue();
+    const pane = document.querySelector('#sc-main .pane.on');
+    const scrolls = pane.scrollHeight > pane.clientHeight + 6;
+    const cued = document.getElementById('scrollCue').classList.contains('show');
+    return (!scrolls || cued) || 'pane scrolls but no cue';
+  });
+  step('the scroll cue clears the footer', () => {
+    const cue = document.getElementById('scrollCue');
+    const foot = document.querySelector('#sc-main .content-foot');
+    if (getComputedStyle(foot).display === 'none') return true;
+    return cue.getBoundingClientRect().bottom <= foot.getBoundingClientRect().top + 2
+      || 'cue overlaps the footer';
+  });
+  step('the last queue row is not sliced against the footer', () => {
+    const pane = document.querySelector('#sc-main .pane.on');
+    pane.scrollTop = pane.scrollHeight;
+    const rows = qa('#pane-tasks .qrow[data-w]');
+    if (!rows.length) return 'no rows';
+    const last = rows[rows.length - 1].getBoundingClientRect();
+    return last.bottom <= pane.getBoundingClientRect().bottom + 2
+      || 'last row is cut off at the bottom';
+  });
+
+  // --- resize ----------------------------------------------------------------
+  step('resize grip is present when docked and expanded', () => {
+    state.expanded = true;
+    document.getElementById('sceneSel').value = 'bell'; setScene('bell');
+    return getComputedStyle(document.getElementById('mainGrip')).display !== 'none';
+  });
+  step('resize grip is present in the free window', () => {
+    document.getElementById('sceneSel').value = 'float'; setScene('float');
+    return getComputedStyle(document.getElementById('mainGrip')).display !== 'none';
+  });
+  step('resize grip is present during setup', () => {
+    state.expanded = true;
+    document.getElementById('sceneSel').value = 'firstrun'; setScene('firstrun');
+    return getComputedStyle(document.getElementById('mainGrip')).display !== 'none';
+  });
+  step('resize grip is hidden when minimised', () => {
+    document.getElementById('sceneSel').value = 'float'; setScene('float');
+    state.minimised = true; setScene('float');
+    const hidden = getComputedStyle(document.getElementById('mainGrip')).display === 'none';
+    state.minimised = false; setScene('float');
+    return hidden;
+  });
+  step('dragging the grip resizes the window', () => {
+    const grip = document.getElementById('mainGrip'), main = document.getElementById('mainWin');
+    const before = main.offsetWidth;
+    grip.dispatchEvent(new MouseEvent('mousedown', {clientX:500, clientY:500, bubbles:true}));
+    window.dispatchEvent(new MouseEvent('mousemove', {clientX:610, clientY:560}));
+    window.dispatchEvent(new MouseEvent('mouseup'));
+    const after = main.offsetWidth;
+    main.style.width = before + 'px';
+    return after > before || `${before} → ${after}`;
+  });
+
+  // --- the logo is not a control ---------------------------------------------
+  /* The Ware selector is the one thing on the Pricing tab that may never be dropped —
+     without it there is no way to change Ware. Checked at every width. */
+  [['docked, expanded', 'bell', true, 'default'],
+   ['free, default',    'float', true, 'default'],
+   ['free, fill screen','float', true, 'full']].forEach(([label, scene, exp, size]) => {
+    step(`Ware selector usable — ${label}`, () => {
+      state.expanded = exp; state.size = size;
+      document.getElementById('sceneSel').value = scene; setScene(scene);
+      qa('.nav-item[data-tab]').find(x => x.dataset.tab === 'pricing').click();
+      applyBreakpoints();
+      const list = document.querySelector('.warelist');
+      if (!list) return 'no Ware list at all';
+      const r = list.getBoundingClientRect();
+      if (r.height < 24) return `Ware list collapsed to ${Math.round(r.height)}px — no way to change Ware`;
+      const rows = qa('.warelist [data-hover]');
+      if (rows.length < 2) return 'fewer than 2 selectable Wares';
+      const first = rows[0].getBoundingClientRect();
+      if (first.height < 12 || first.width < 24) return 'rows have no clickable area';
+      return true;
+    });
+  });
+  step('clicking a Ware in the strip swaps the chart', () => {
+    const rows = qa('.warelist [data-hover]');
+    const before = state.hovered;
+    rows[2].click();
+    const changed = state.hovered !== before;
+    return changed && canvasHasInk(document.querySelector('.face:not([style*="hidden"]) canvas.big')
+      || document.querySelector('canvas.big')) || `changed=${changed}`;
+  });
+  step('hidden panels really are hidden', () => {
+    state.expanded = true;
+    document.getElementById('sceneSel').value = 'float'; setScene('float');
+    qa('.nav-item[data-tab]').find(x => x.dataset.tab === 'tasks').click();
+    const w = document.getElementById('whyOrder');
+    const shown = getComputedStyle(w).display !== 'none';
+    return !shown || 'the "why this order" panel is visible while marked hidden';
+  });
+  step('narrow layout keeps the price clear of Slot Yield', () => {
+    state.expanded = true;
+    document.getElementById('sceneSel').value = 'bell'; setScene('bell');
+    qa('.nav-item[data-tab]').find(x => x.dataset.tab === 'tasks').click();
+    applyBreakpoints();
+    const row = document.querySelector('#pane-tasks .qrow[data-w]');
+    if (!row) return 'no rows';
+    const price = row.querySelector('.price'), sy = row.querySelector('.sy');
+    return price.getBoundingClientRect().right <= sy.getBoundingClientRect().left + 1
+      || 'price overlaps Slot Yield';
+  });
+  step('the plugin mark is a logo, not a button', () => {
+    const m = document.querySelector('#mainWin .mark');
+    if (!m) return 'no mark';
+    if (m.tagName === 'BUTTON') return 'the mark is a <button> — it will invite a dead click';
+    return !!m.querySelector('svg') || 'the mark has no glyph, so it reads as a blank control';
+  });
+
+  // --- no dead clicks --------------------------------------------------------
+  step('every visible button acts or says it is not built', () => {
+    setScene('float');
+    const dead = [];
+    TABS.forEach(t => {
+      qa('.nav-item[data-tab]').find(x => x.dataset.tab === t.id).click();
+      qa('#pane-' + t.id + ' button').forEach(b => {
+        const handled = b.onclick || b.dataset.live || b.dataset.wired ||
+          b.matches('.sw, .rchip, .pagetab, .itile, [data-invslot], [data-page], [data-space], [data-hover], [data-zoom], [data-r]');
+        // everything else is caught by the not-built flash, which is a real response
+        if (!handled && !b.textContent.trim()) dead.push(t.id + ': blank button');
+      });
+    });
+    return dead.length === 0 || dead.join('; ');
+  });
+  step('Apply removes the applied Proposals', () => {
+    state.applied.clear(); state.expanded = true;
+    document.getElementById('sceneSel').value = 'float'; setScene('float');
+    qa('.nav-item[data-tab]').find(x => x.dataset.tab === 'tasks').click();
+    const before = qa('#pane-tasks .qrow[data-w]').length;
+    document.querySelector('[data-live="apply"]').click();
+    const after = qa('#pane-tasks .qrow[data-w]').length;
+    const logged = document.getElementById('footLog').textContent.includes('Applied');
+    state.applied.clear(); renderPanes();
+    return (after < before && logged) || `${before} → ${after}, logged=${logged}`;
+  });
+  step('Why this order? opens the explanation', () => {
+    qa('.nav-item[data-tab]').find(x => x.dataset.tab === 'tasks').click();
+    document.querySelector('[data-live="why"]').click();
+    const open = !document.getElementById('whyOrder').hidden;
+    document.querySelector('[data-live="why"]').click();
+    return open;
+  });
+  step('Show me why opens the Floor expression', () => {
+    qa('.nav-item[data-tab]').find(x => x.dataset.tab === 'strategies').click();
+    const b = document.querySelector('[data-live="showWhy"]');
+    b.click();
+    const open = !b.closest('.card').querySelector('.whybox').hidden;
+    b.click();
+    return open;
+  });
+  step('Refresh now runs the scan bar', () => {
+    qa('.nav-item[data-tab]').find(x => x.dataset.tab === 'scan').click();
+    document.querySelector('[data-live="refresh"]').click();
+    const moved = parseFloat(document.getElementById('scanBar').style.width) > 0;
+    const state2 = document.getElementById('scanState').textContent;
+    return (moved && state2 === 'scanning') || `width moved=${moved} state=${state2}`;
+  });
+  step('backfill Pause toggles', () => {
+    const b = document.querySelector('[data-live="pauseBackfill"]');
+    b.click(); const paused = b.textContent === 'Resume';
+    b.click(); return paused && b.textContent === 'Pause';
+  });
+  step('toggle switches actually toggle', () => {
+    document.getElementById('sceneSel').value = 'config'; setScene('config');
+    qa('[data-cfg]').find(x => x.dataset.cfg === 'mandates').click();
+    const sw = document.querySelector('#pane-cfg .sw');
+    const before = sw.getAttribute('aria-pressed');
+    sw.click();
+    const after = sw.getAttribute('aria-pressed');
+    sw.click();
+    return before !== after;
+  });
+  step('an unbuilt control says so rather than doing nothing', () => {
+    qa('[data-cfg]').find(x => x.dataset.cfg === 'strategies').click();
+    const b = [...document.querySelectorAll('#pane-cfg button')]
+      .find(x => x.textContent.trim() === 'New Group');
+    if (!b) return 'New Group button missing';
+    b.click();
+    const said = b.textContent.includes('not built');
+    return said || 'clicked and nothing happened';
+  });
+
+  // --- wizard routes out ------------------------------------------------------
+  step('the wizard finishes into the workspace', () => {
+    state.expanded = true; state.setupStep = SETUP_STEPS.length - 1;
+    document.getElementById('sceneSel').value = 'firstrun'; setScene('firstrun');
+    document.getElementById('wizNext').click();
+    return state.scene === 'bell' || 'ended at ' + state.scene;
+  });
+  step('Skip setup routes out too', () => {
+    state.expanded = true; state.setupStep = 0;
+    document.getElementById('sceneSel').value = 'firstrun'; setScene('firstrun');
+    document.querySelector('[data-live="wizardFinish"]').click();
+    return state.scene === 'bell' || 'ended at ' + state.scene;
+  });
+
+  // --- report ----------------------------------------------------------------
+  const fails = R.filter(r => !r.pass);
+  const head = panel.querySelector('#stHead');
+  head.style.color = fails.length ? '#e2726c' : '#3fb950';
+  head.style.fontWeight = '600';
+  head.textContent = `${R.length - fails.length} of ${R.length} passed` +
+    (fails.length ? ` · ${fails.length} FAILED` : ' · all clear');
+  return R;
+}
+if (hash.get('selftest')) setTimeout(() => {
+  try { runSelfTest(); }
+  catch (e) {
+    const h = document.getElementById('stHead');
+    if (h) { h.style.color = '#e2726c'; h.textContent = 'HARNESS THREW: ' + e.message; }
+    else { document.body.innerHTML = '<pre style="color:#e2726c;padding:20px">HARNESS THREW: ' +
+      e.message + '\n' + e.stack + '</pre>'; }
+  }
+}, 120);
+</script>
+</body>
+</html>

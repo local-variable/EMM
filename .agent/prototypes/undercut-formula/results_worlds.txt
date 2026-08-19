@@ -1,0 +1,69 @@
+﻿loading Cactuar ...
+  Cactuar: 25,242 Wares
+loading Adamantoise ...
+  Adamantoise: 25,242 Wares
+
+========================================================================================================
+TABLE 10 - fitted parameters, Cactuar against Adamantoise (both on Aether)
+========================================================================================================
+
+  horizon (days)
+    ware type            Cactuar    Adamantoise     ratio   reading
+    ---------------------------------------------------------------------------
+    Materia                    3              3      1.00   agrees
+    Material                   9              9      1.00   agrees
+    Consumable                39             45      1.15   agrees
+    Gear                      60             60      1.00   agrees
+    Furnishing                27             25      0.93   agrees
+    Collectible               19             19      1.00   agrees
+    Miscellany                20             60      3.00   differs sharply
+
+  stack target (gil)
+    ware type            Cactuar    Adamantoise     ratio   reading
+    ---------------------------------------------------------------------------
+    Materia                2,000          1,999      1.00   agrees
+    Material               4,950          4,990      1.01   agrees
+    Consumable             7,475          6,015      0.80   agrees
+    Gear                  29,875         19,998      0.67   differs
+    Furnishing            13,970         16,978      1.22   agrees
+    Collectible           18,000         20,000      1.11   agrees
+
+  median unit price
+    ware type            Cactuar    Adamantoise     ratio   reading
+    ---------------------------------------------------------------------------
+    Materia                  480            722      1.50   differs
+    Material                 670            679      1.01   agrees
+    Consumable               750            750      1.00   agrees
+    Gear                  22,000         25,000      1.14   agrees
+    Furnishing            20,580         21,370      1.04   agrees
+    Collectible           29,996         30,000      1.00   agrees
+    Miscellany         1,085,008      1,100,000      1.01   agrees
+
+  share clearing n_eff>=5
+    ware type            Cactuar    Adamantoise     ratio   reading
+    ---------------------------------------------------------------------------
+    Materia                71.4%          71.4%      1.00   agrees
+    Material               54.3%          54.9%      1.01   agrees
+    Consumable             21.9%          22.8%      1.04   agrees
+    Gear                   15.0%          17.4%      1.16   agrees
+    Furnishing             35.0%          39.8%      1.14   agrees
+    Collectible            62.1%          60.7%      0.98   agrees
+    Miscellany             37.3%          34.1%      0.91   agrees
+
+========================================================================================================
+TABLE 11 - the same Ware priced on both worlds
+========================================================================================================
+  ware type        wares      p10   median      p90  |gap|>25%
+  ------------------------------------------------------------
+  Materia            172     0.78     1.02     1.64        29%
+  Material         2,379     0.53     1.00     2.04        51%
+  Consumable       1,169     0.31     0.98     2.51        67%
+  Gear             4,422     0.45     1.00     2.44        65%
+  Furnishing       1,400     0.46     1.01     2.02        57%
+  Collectible        896     0.50     1.00     1.88        52%
+  Miscellany          49     0.63     1.00     1.11        22%
+  ------------------------------------------------------------
+  ALL             10,487     0.46     1.00     2.22        59%
+
+  ratio = Adamantoise price / Cactuar price, 90-day median, Wares with >= 8 sales
+  on both worlds. 1.00 = the two worlds price the Ware the same.

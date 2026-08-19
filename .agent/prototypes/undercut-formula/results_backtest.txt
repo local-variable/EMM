@@ -1,0 +1,96 @@
+﻿
+======================================================================================================================
+TABLE 4a - policy back-test where the fill rule HOLDS (wares that trade one unit at a time)
+           270 days of real Cactuar sales, a decision every 3 days, 21-day horizon
+======================================================================================================================
+
+Labyrinthos Grape Lamppost NQ   -   83 decision points, 5 declined for a thin sample (6%)
+  policy                   asking    sold  unsold   held  days to sell   gil/slot-day   gil/decision
+  --------------------------------------------------------------------------------------------------
+  floored undercut         26,419      20       7     51          0.7d          2,579         18,591
+  undercut -5%             10,293      68      10      0          1.4d          1,814          8,525
+  undercut -1g             11,157      65      13      0          1.4d          1,623          8,833
+  match                    11,158      65      13      0          1.4d          1,618          8,834
+  trimmed mean             12,761      52      26      0          1.8d            798          8,082
+  median (30d)             12,009      53      25      0          1.9d            787          7,752
+  median +10%              13,343      50      28      0          2.1d            763          8,125
+  q25 (30d)                 5,598      58      20      0          1.3d            503          3,954
+
+Gold Thumb's Mallet HQ   -   83 decision points, 2 declined for a thin sample (2%)
+  policy                   asking    sold  unsold   held  days to sell   gil/slot-day   gil/decision
+  --------------------------------------------------------------------------------------------------
+  undercut -5%            413,778      81       0      0          1.2d        175,791        393,089
+  match                   440,968      78       3      0          1.5d        112,568        403,404
+  undercut -1g            440,967      78       3      0          1.5d        112,568        403,403
+  floored undercut        529,260      54       3     24          2.3d        109,019        476,334
+  trimmed mean            527,824      75       6      0          2.1d         98,542        464,290
+  median +10%             493,036      75       6      0          1.9d         94,741        433,689
+  median (30d)            448,214      75       6      0          1.6d         89,155        394,262
+  q25 (30d)               353,709      75       6      0          1.3d         82,201        311,133
+
+Flower-wreathed Gazebo NQ   -   83 decision points, 6 declined for a thin sample (7%)
+  policy                   asking    sold  unsold   held  days to sell   gil/slot-day   gil/decision
+  --------------------------------------------------------------------------------------------------
+  floored undercut          1,626      30       7     40          1.4d            212          1,253
+  undercut -5%                935      69       8      0          1.2d            207            796
+  trimmed mean              2,397      56      21      0          2.0d            190          1,656
+  undercut -1g                939      68       9      0          1.2d            189            787
+  match                       940      68       9      0          1.3d            182            788
+  median (30d)              1,192      58      19      0          1.5d            112            853
+  median +10%               1,201      56      21      0          2.0d             94            829
+  q25 (30d)                   427      67      10      0          1.2d             83            353
+
+Everseeker's Fishing Rod HQ   -   83 decision points, 45 declined for a thin sample (54%)
+  policy                   asking    sold  unsold   held  days to sell   gil/slot-day   gil/decision
+  --------------------------------------------------------------------------------------------------
+  q25 (30d)                67,703      35       3      0          2.5d         10,638         59,240
+  median (30d)             79,579      35       3      0          4.0d         10,612         69,631
+  undercut -5%             77,277      34       4      0          2.5d         10,247         65,685
+  trimmed mean             86,820      33       5      0          4.1d          9,016         71,627
+  match                    80,365      32       6      0          2.3d          8,412         64,292
+  undercut -1g             80,364      32       6      0          2.3d          8,412         64,292
+  floored undercut         88,137      26       6      6          2.9d          7,774         68,031
+  median +10%              86,059      31       7      0          4.3d          7,544         66,695
+
+
+======================================================================================================================
+TABLE 4b - the same back-test where the fill rule DOES NOT HOLD (stack-traded commodities)
+           Shown for contrast only. Unit price moves with stack size here, so
+           'cheapest unit price wins the buyer' is false and these rankings are artefacts.
+======================================================================================================================
+
+Quicktongue Materia XI NQ   -   83 decision points, 0 declined for a thin sample (0%)
+  policy                   asking    sold  unsold   held  days to sell   gil/slot-day   gil/decision
+  --------------------------------------------------------------------------------------------------
+  q25 (30d)                   589      83       0      0          0.2d          1,670            559
+  median (30d)                956      83       0      0          0.3d          1,507            908
+  trimmed mean              1,089      83       0      0          0.3d          1,393          1,034
+  median +10%               1,052      83       0      0          0.3d          1,353            999
+  match                       105      83       0      0          0.1d            360            100
+  undercut -1g                105      83       0      0          0.1d            357             99
+  undercut -5%                100      83       0      0          0.1d            342             95
+  floored undercut              -       0       0     83             -              -              -
+
+Gatherer's Guile Materia XI NQ   -   83 decision points, 0 declined for a thin sample (0%)
+  policy                   asking    sold  unsold   held  days to sell   gil/slot-day   gil/decision
+  --------------------------------------------------------------------------------------------------
+  q25 (30d)                 3,153      83       0      0          0.2d          4,667          2,995
+  floored undercut            898       2       0     81          0.2d          3,412            853
+  match                       568      83       0      0          0.1d          1,792            539
+  undercut -1g                567      83       0      0          0.1d          1,789            539
+  undercut -5%                539      83       0      0          0.1d          1,703            512
+  median (30d)              3,728      81       2      0          0.3d          1,654          3,456
+  trimmed mean              3,861      81       2      0          0.4d          1,549          3,580
+  median +10%               3,742      77       6      0          0.6d            887          3,298
+
+Mythloam Aethersand NQ   -   83 decision points, 1 declined for a thin sample (1%)
+  policy                   asking    sold  unsold   held  days to sell   gil/slot-day   gil/decision
+  --------------------------------------------------------------------------------------------------
+  floored undercut            489      28       4     50          1.1d             87            407
+  undercut -1g                242      78       4      0          0.5d             75            219
+  undercut -5%                230      79       3      0          0.5d             75            211
+  match                       243      78       4      0          0.5d             74            220
+  q25 (30d)                   214      78       4      0          0.5d             64            194
+  median (30d)                289      67      15      0          1.0d             41            225
+  median +10%                 318      67      15      0          1.2d             40            247
+  trimmed mean                317      64      18      0          1.2d             35            235

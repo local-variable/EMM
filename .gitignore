@@ -27,3 +27,17 @@ packages/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Prototype market-data corpus. READ .agent/prototypes/undercut-formula/README.md BEFORE
+# fetching anything. Roughly 832 MB of cached aggregator data across ~2,740 files, held on the
+# maintainer's working copy and deliberately never committed: this repository is public, that
+# volume is permanent in every clone, and the aggregator publishes no data licence. It is also
+# not cheaply reproducible - about 1,200 requests and the best part of an hour per World - so
+# an absent directory is not an invitation to re-scrape.
+.agent/prototypes/undercut-formula/data/
+.agent/prototypes/undercut-formula/data_all/
+.agent/prototypes/undercut-formula/data_adam/
+
+# Python bytecode from the prototypes
+__pycache__/
+*.pyc

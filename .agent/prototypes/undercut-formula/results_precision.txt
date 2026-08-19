@@ -1,0 +1,67 @@
+﻿undercut-formula prototype, stage 5 - precision - 2026-08-17T17:44Z
+400 bootstrap replicates, 80% interval, median unit price over 30 days
+
+================================================================================================================
+TABLE H - how much does the clumping cost? block bootstrap against i.i.d. bootstrap
+         Ratio of interval widths on the same Wares and the same 30-day windows.
+================================================================================================================
+  ware type        wares  median ratio      p90   reading
+  -------------------------------------------------------------------
+  Materia             13          1.20     3.10   block interval is wider
+  Material           116          1.30     2.81   block interval is wider
+  Consumable          42          1.13     2.58   block interval is wider
+  Gear                81          1.05     2.25   block interval is wider
+  Furnishing          45          1.34     2.92   block interval is wider
+  Collectible         43          1.20     2.66   block interval is wider
+
+  A ratio above 1 means the ordinary bootstrap was overstating precision.
+
+================================================================================================================
+TABLE I - what precision does a given sample actually buy?
+         Median relative half-width of the 80% interval on the 30-day median
+         unit price, by sample size and ware type. Read it as +/- that fraction.
+================================================================================================================
+  ware type             3-4        5-9      10-19      20-49      50-99    100-299       300+
+  -------------------------------------------------------------------------------------------
+  Materia                 -          -          -      6.1%          -      4.1%          -
+  Material            0.7%     30.2%     21.5%     14.3%     20.9%      8.9%      7.6%
+  Consumable         37.6%     15.6%     33.0%     17.0%          -          -          -
+  Gear                8.9%     14.3%     10.6%     14.1%     33.3%          -          -
+  Furnishing          1.7%     10.0%     14.1%     12.2%          -          -          -
+  Collectible        17.0%      2.9%     12.4%     24.1%     13.4%          -          -
+
+  '-' = fewer than 5 Wares of that type landed in that sample bucket.
+
+================================================================================================================
+TABLE I2 - precision against sample size, WITHIN Ware
+         Wares with >= 60 sales in 90 days, their own window subsampled down to
+         each n (20 draws each). Median relative half-width of the 80% interval.
+================================================================================================================
+  ware type        wares       n=3       n=5      n=10      n=20      n=40      n=60
+  ----------------------------------------------------------------------------------
+  Materia             13     0.8%     2.5%     7.3%     9.0%     6.9%     7.9%
+  Material            97     2.9%     6.9%    13.9%    15.7%    15.2%    16.3%
+  Consumable          30     3.8%     5.5%     8.7%    15.4%    14.3%     9.8%
+  Gear                19     0.1%     1.4%    10.3%    16.3%    12.3%    12.9%
+  Furnishing          26     0.5%     1.2%     6.2%     8.9%    10.4%    10.5%
+  Collectible         22     1.3%     2.8%     8.1%    11.8%    10.2%    20.7%
+
+  Contiguous subsamples, not random rows, so the clumping is preserved.
+
+================================================================================================================
+TABLE J - what a precision rule would actually admit
+         Share of Wares of each type that clear a given precision bar on the
+         30-day median, with n >= 5 in 30 days as a hard floor beneath all of them.
+================================================================================================================
+  ware type        wares    n>=5     +/-5%    +/-10%    +/-15%    +/-25%    +/-50%
+  --------------------------------------------------------------------------------
+  Materia             14      13       57%       64%       86%       86%       93%
+  Material           203     131        7%       21%       32%       42%       60%
+  Consumable         203      54        7%       10%       13%       15%       21%
+  Gear               822     156        6%        9%       10%       14%       17%
+  Furnishing         159      59       12%       14%       20%       26%       33%
+  Collectible         71      55       24%       34%       41%       52%       69%
+  Miscellany           7       3       29%       29%       43%       43%       43%
+
+  Percentages are of ALL Wares of that type, not of those clearing the n floor,
+  so they state the real coverage cost of the rule: what EMM would refuse to price.

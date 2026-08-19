@@ -1,0 +1,67 @@
+﻿undercut-formula prototype, stage 7 - local index - 2026-08-17T17:45Z
+
+================================================================================================================
+TABLE K - how far does the local World sit from its data centre?
+         Ratio of the Cactuar figure to the Aether figure, per Ware.
+================================================================================================================
+
+  average sale price
+    ware type        wares      p10   median      p90  |gap|>25%  |gap|>50%
+    -----------------------------------------------------------------------
+    Materia             10     0.17     0.84     1.29        50%        10%
+    Material           102     0.40     0.98     1.67        57%        29%
+    Consumable          38     0.18     0.90     2.07        63%        45%
+    Gear               108     0.44     1.00     1.69        49%        29%
+    Furnishing          39     0.69     1.00     2.61        38%        26%
+    Collectible         37     0.43     0.92     1.47        51%        24%
+
+  cheapest listing
+    ware type        wares      p10   median      p90  |gap|>25%  |gap|>50%
+    -----------------------------------------------------------------------
+    Materia             14     1.00     1.44     2.78        57%        43%
+    Material           164     1.00     2.30    31.60        72%        64%
+    Consumable         137     1.00     2.72    55.00        73%        66%
+    Gear               367     1.00     2.29    18.13        72%        68%
+    Furnishing         123     1.00     1.80     8.59        72%        58%
+    Collectible         65     1.00     1.66     8.00        68%        55%
+    Miscellany           5     1.00     1.16     1.56        40%        40%
+
+  1.00 = the local World agrees with its data centre.
+
+================================================================================================================
+TABLE L - is the DC's cheapest listing even on this World?
+================================================================================================================
+  ware type        wares  dc min is local  median local premium
+  -------------------------------------------------------------
+  Materia             14             29%                 1.44x
+  Material           164             18%                 2.30x
+  Consumable         137             21%                 2.72x
+  Gear               367             17%                 2.29x
+  Furnishing         123             12%                 1.80x
+  Collectible         65             12%                 1.66x
+  Miscellany           5             40%                 1.16x
+
+  Where the local cheapest listing is above the DC's, the gap is not an
+  opportunity for a local seller - it is a price on a board the buyer would
+  have to travel to, and cross-DC travel is out of scope by decision.
+
+================================================================================================================
+TABLE M - a local pricing index for Cactuar, by ware type
+         Median of (World average sale price / DC average sale price) across Wares,
+         with the share of Wares above and below parity.
+================================================================================================================
+  ware type        wares    index   % rich   % cheap  velocity share
+  ------------------------------------------------------------------
+  Materia             10     0.84     30%      60%          12.4%
+  Material           102     0.98     39%      46%          11.5%
+  Consumable          38     0.90     34%      53%          12.5%
+  Gear               108     1.00     40%      34%          24.8%
+  Furnishing          39     1.00     41%      38%          18.3%
+  Collectible         37     0.92     32%      51%          12.5%
+
+  velocity share = this World's daily units sold as a fraction of the whole DC's,
+  i.e. how much of the data centre's trade in that type happens here.
+
+  NOT MEASURED: whether a large World-vs-DC gap predicts the World reverting
+  towards the DC. That needs a DC history series, and a deep DC history request
+  returns HTTP 500 - so it needs a targeted, throttled backfill of its own.

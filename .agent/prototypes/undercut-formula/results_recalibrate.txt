@@ -1,0 +1,44 @@
+﻿
+========================================================================================================
+TABLE 9 - do the fitted parameters hold still? 12 weekly refits, 30-day window each
+========================================================================================================
+  Each refit uses only data before its own date, exactly as the daily job would.
+
+  horizon (days)
+    ware type            first         last          min          max  range/median   wk-to-wk
+    ------------------------------------------------------------------------------------------
+    Materia                  3            3            3            3           0%        0%
+    Material                 7            8            7            9          25%        0%
+    Consumable              30           30           22           30          31%       13%
+    Gear                    60           60           60           60           0%        0%
+    Furnishing              16           26           16           26          50%        0%
+    Collectible             15           18           15           20          29%        0%
+    Miscellany              22           11            9           22         100%       21%
+
+  stack target (gil)
+    ware type            first         last          min          max  range/median   wk-to-wk
+    ------------------------------------------------------------------------------------------
+    Materia              1,494        1,800        1,494        2,400          43%        8%
+    Material             4,000        5,000        4,000        5,025          21%        1%
+    Consumable           5,250        7,996        5,250        8,376          43%        6%
+    Gear                29,205       29,198       29,198       40,590          38%        2%
+    Furnishing          10,200       15,000       10,200       15,000          41%        3%
+    Collectible         20,000       19,997       14,001       20,000          35%       12%
+
+  median unit price
+    ware type            first         last          min          max  range/median   wk-to-wk
+    ------------------------------------------------------------------------------------------
+    Materia                398          440          390          490          23%        7%
+    Material               675          665          665          729           9%        2%
+    Consumable             788          760          699          798          13%        1%
+    Gear                24,999       24,000       22,499       25,000          10%        2%
+    Furnishing          20,635       17,000       17,000       22,272          26%        4%
+    Collectible         37,086       33,440       30,000       37,086          21%        4%
+    Miscellany       1,500,000      743,999      743,999    1,914,461          94%       15%
+
+  range/median = how far the parameter travelled across the 12 refits.
+  wk-to-wk     = the typical move between one refit and the next.
+
+  These are WEEKLY refits on a 30-day window, so they are the slow-moving
+  version of the daily job. A daily refit on the same window moves less per
+  step and reacts sooner; both are strictly better than a constant.

@@ -1,0 +1,78 @@
+﻿scope: Cactuar (world) / Aether (dc)   as of 2026-08-17T17:22Z
+
+item                                sales(w)       span  sales/d  sales90(w)  sales90(dc)  lstg(w)  lstg(dc)
+------------------------------------------------------------------------------------------------------------
+Quicktongue Materia XI                49,314      775d    63.63       2,300       18,795        4       100
+Gatherer's Guile Materia XI           35,003      776d    45.11       2,942       24,265       64       100
+Mythloam Aethersand                    5,516      774d     7.13         109          760       24       100
+Labyrinthos Grape Lamppost             1,144      942d     1.21         112        1,046       24       100
+Gold Thumb's Mallet                      408      376d     1.09          61          565       26        91
+Flower-wreathed Gazebo                   820    1,048d     0.78          60          425       28       100
+Everseeker's Fishing Rod                 792      641d     1.24           4           50        0         6
+
+aggregated (world) fields present:
+{
+  "itemId": 41769,
+  "nq": {
+    "minListing": {
+      "world": {
+        "price": 350
+      },
+      "dc": {
+        "price": 117,
+        "worldId": 73
+      },
+      "region": {
+        "price": 10,
+        "worldId": 410
+      }
+    },
+    "recentPurchase": {
+      "world": {
+        "price": 11000,
+        "timestamp": 1786966502000
+      },
+      "dc": {
+        "price": 740,
+        "timestamp": 1786980131000,
+        "worldId": 40
+      },
+      "region": {
+        "price": 200,
+        "timestamp": 1786982296000,
+        "worldId": 53
+      }
+    },
+    "averageSalePrice": {
+      "world": {
+        "price": 420.29353846153845
+      },
+      "dc": {
+        "price": 359.17416745546853
+      },
+      "region": {
+        "price": 368.68639331725393
+      }
+    },
+    "dailySaleVelocity": {
+      "world": {
+        "quantity": 437.0143797512786
+      },
+      "dc": {
+        "quantity": 3125.257898270856
+      },
+      "region": {
+        "quantity": 9143.1475495359
+      }
+    }
+  },
+  "hq": {
+    "minListing": {},
+    "recentPurchase": {},
+    "averageSalePrice": {},
+    "dailySaleVelocity": {}
+  },
+  "worldUploadTimes": [
+    {
+      "worldId": 79,
+      "timestamp": 178

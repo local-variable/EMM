@@ -50,4 +50,13 @@
     <ProjectReference Include="..\EorzeanMarketMaster.Core\EorzeanMarketMaster.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!--
+      Recorded aggregator responses, laid down beside the test assembly so the parser is asserted
+      against bodies that really came back rather than against a hand-written idea of them. See
+      Ingest/IngestFixture.cs for what was changed in them and why.
+    -->
+    <Content Include="Ingest\Fixtures\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

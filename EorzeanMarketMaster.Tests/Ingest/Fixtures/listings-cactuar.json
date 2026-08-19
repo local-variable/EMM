@@ -1,0 +1,363 @@
+{
+    "itemIDs":  [
+                    1602,
+                    1603,
+                    1604,
+                    1605
+                ],
+    "items":  {
+                  "1602":  {
+                               "itemID":  1602,
+                               "worldID":  79,
+                               "lastUploadTime":  1786768182869,
+                               "listings":  [
+                                                {
+                                                    "lastReviewTime":  1786768182,
+                                                    "pricePerUnit":  4999,
+                                                    "quantity":  1,
+                                                    "stainID":  0,
+                                                    "creatorName":  "",
+                                                    "creatorID":  null,
+                                                    "hq":  false,
+                                                    "isCrafted":  false,
+                                                    "listingID":  "1014003042",
+                                                    "materia":  [
+
+                                                                ],
+                                                    "onMannequin":  false,
+                                                    "retainerCity":  3,
+                                                    "retainerID":  "1007003021",
+                                                    "retainerName":  "Sable Ashgrove",
+                                                    "sellerID":  null,
+                                                    "total":  4999,
+                                                    "tax":  249
+                                                },
+                                                {
+                                                    "lastReviewTime":  1786768182,
+                                                    "pricePerUnit":  25000,
+                                                    "quantity":  1,
+                                                    "stainID":  0,
+                                                    "creatorName":  "",
+                                                    "creatorID":  null,
+                                                    "hq":  true,
+                                                    "isCrafted":  false,
+                                                    "listingID":  "1028003084",
+                                                    "materia":  [
+
+                                                                ],
+                                                    "onMannequin":  false,
+                                                    "retainerCity":  2,
+                                                    "retainerID":  "1021003063",
+                                                    "retainerName":  "Meadowlark",
+                                                    "sellerID":  null,
+                                                    "total":  25000,
+                                                    "tax":  1250
+                                                },
+                                                {
+                                                    "lastReviewTime":  1786768182,
+                                                    "pricePerUnit":  1000000,
+                                                    "quantity":  1,
+                                                    "stainID":  0,
+                                                    "creatorName":  "",
+                                                    "creatorID":  null,
+                                                    "hq":  false,
+                                                    "isCrafted":  false,
+                                                    "listingID":  "1042003126",
+                                                    "materia":  [
+
+                                                                ],
+                                                    "onMannequin":  false,
+                                                    "retainerCity":  1,
+                                                    "retainerID":  "1035003105",
+                                                    "retainerName":  "Quillon",
+                                                    "sellerID":  null,
+                                                    "total":  1000000,
+                                                    "tax":  50000
+                                                }
+                                            ],
+                               "recentHistory":  [
+
+                                                 ],
+                               "currentAveragePrice":  343333,
+                               "currentAveragePriceNQ":  502499.5,
+                               "currentAveragePriceHQ":  25000,
+                               "regularSaleVelocity":  0,
+                               "nqSaleVelocity":  0,
+                               "hqSaleVelocity":  0,
+                               "averagePrice":  0,
+                               "averagePriceNQ":  0,
+                               "averagePriceHQ":  0,
+                               "minPrice":  4999,
+                               "minPriceNQ":  4999,
+                               "minPriceHQ":  25000,
+                               "maxPrice":  1000000,
+                               "maxPriceNQ":  1000000,
+                               "maxPriceHQ":  25000,
+                               "stackSizeHistogram":  {
+                                                          "1":  3
+                                                      },
+                               "stackSizeHistogramNQ":  {
+                                                            "1":  2
+                                                        },
+                               "stackSizeHistogramHQ":  {
+                                                            "1":  1
+                                                        },
+                               "worldName":  "Cactuar",
+                               "listingsCount":  3,
+                               "recentHistoryCount":  0,
+                               "unitsForSale":  3,
+                               "unitsSold":  0,
+                               "hasData":  true
+                           },
+                  "1603":  {
+                               "itemID":  1603,
+                               "worldID":  79,
+                               "lastUploadTime":  1786977993245,
+                               "listings":  [
+                                                {
+                                                    "lastReviewTime":  1786977994,
+                                                    "pricePerUnit":  15000,
+                                                    "quantity":  1,
+                                                    "stainID":  0,
+                                                    "creatorName":  "",
+                                                    "creatorID":  null,
+                                                    "hq":  true,
+                                                    "isCrafted":  false,
+                                                    "listingID":  "1056003168",
+                                                    "materia":  [
+
+                                                                ],
+                                                    "onMannequin":  false,
+                                                    "retainerCity":  2,
+                                                    "retainerID":  "1049003147",
+                                                    "retainerName":  "Bramblewick",
+                                                    "sellerID":  null,
+                                                    "total":  15000,
+                                                    "tax":  750
+                                                },
+                                                {
+                                                    "lastReviewTime":  1786977994,
+                                                    "pricePerUnit":  20000,
+                                                    "quantity":  1,
+                                                    "stainID":  0,
+                                                    "creatorName":  "",
+                                                    "creatorID":  null,
+                                                    "hq":  true,
+                                                    "isCrafted":  false,
+                                                    "listingID":  "1070003210",
+                                                    "materia":  [
+
+                                                                ],
+                                                    "onMannequin":  false,
+                                                    "retainerCity":  14,
+                                                    "retainerID":  "1063003189",
+                                                    "retainerName":  "Tarnish",
+                                                    "sellerID":  null,
+                                                    "total":  20000,
+                                                    "tax":  1000
+                                                }
+                                            ],
+                               "recentHistory":  [
+
+                                                 ],
+                               "currentAveragePrice":  17500,
+                               "currentAveragePriceNQ":  0,
+                               "currentAveragePriceHQ":  17500,
+                               "regularSaleVelocity":  0,
+                               "nqSaleVelocity":  0,
+                               "hqSaleVelocity":  0,
+                               "averagePrice":  0,
+                               "averagePriceNQ":  0,
+                               "averagePriceHQ":  0,
+                               "minPrice":  15000,
+                               "minPriceNQ":  0,
+                               "minPriceHQ":  15000,
+                               "maxPrice":  20000,
+                               "maxPriceNQ":  0,
+                               "maxPriceHQ":  20000,
+                               "stackSizeHistogram":  {
+                                                          "1":  2
+                                                      },
+                               "stackSizeHistogramNQ":  {
+
+                                                        },
+                               "stackSizeHistogramHQ":  {
+                                                            "1":  2
+                                                        },
+                               "worldName":  "Cactuar",
+                               "listingsCount":  2,
+                               "recentHistoryCount":  0,
+                               "unitsForSale":  2,
+                               "unitsSold":  0,
+                               "hasData":  true
+                           },
+                  "1604":  {
+                               "itemID":  1604,
+                               "worldID":  79,
+                               "lastUploadTime":  1786871641707,
+                               "listings":  [
+                                                {
+                                                    "lastReviewTime":  1786871641,
+                                                    "pricePerUnit":  1500,
+                                                    "quantity":  1,
+                                                    "stainID":  0,
+                                                    "creatorName":  "",
+                                                    "creatorID":  null,
+                                                    "hq":  false,
+                                                    "isCrafted":  false,
+                                                    "listingID":  "1084003252",
+                                                    "materia":  [
+
+                                                                ],
+                                                    "onMannequin":  false,
+                                                    "retainerCity":  3,
+                                                    "retainerID":  "1077003231",
+                                                    "retainerName":  "Pennyroyal",
+                                                    "sellerID":  null,
+                                                    "total":  1500,
+                                                    "tax":  75
+                                                },
+                                                {
+                                                    "lastReviewTime":  1786871641,
+                                                    "pricePerUnit":  1500,
+                                                    "quantity":  1,
+                                                    "stainID":  0,
+                                                    "creatorName":  "",
+                                                    "creatorID":  null,
+                                                    "hq":  false,
+                                                    "isCrafted":  false,
+                                                    "listingID":  "1098003294",
+                                                    "materia":  [
+
+                                                                ],
+                                                    "onMannequin":  false,
+                                                    "retainerCity":  3,
+                                                    "retainerID":  "1091003273",
+                                                    "retainerName":  "Cindermoth",
+                                                    "sellerID":  null,
+                                                    "total":  1500,
+                                                    "tax":  75
+                                                },
+                                                {
+                                                    "lastReviewTime":  1786871641,
+                                                    "pricePerUnit":  4999,
+                                                    "quantity":  1,
+                                                    "stainID":  0,
+                                                    "creatorName":  "",
+                                                    "creatorID":  null,
+                                                    "hq":  true,
+                                                    "isCrafted":  false,
+                                                    "listingID":  "1112003336",
+                                                    "materia":  [
+
+                                                                ],
+                                                    "onMannequin":  false,
+                                                    "retainerCity":  3,
+                                                    "retainerID":  "1105003315",
+                                                    "retainerName":  "Fenwick",
+                                                    "sellerID":  null,
+                                                    "total":  4999,
+                                                    "tax":  249
+                                                },
+                                                {
+                                                    "lastReviewTime":  1786871641,
+                                                    "pricePerUnit":  24000,
+                                                    "quantity":  1,
+                                                    "stainID":  0,
+                                                    "creatorName":  "",
+                                                    "creatorID":  null,
+                                                    "hq":  true,
+                                                    "isCrafted":  false,
+                                                    "listingID":  "1126003378",
+                                                    "materia":  [
+
+                                                                ],
+                                                    "onMannequin":  false,
+                                                    "retainerCity":  1,
+                                                    "retainerID":  "1119003357",
+                                                    "retainerName":  "Gallowglass",
+                                                    "sellerID":  null,
+                                                    "total":  24000,
+                                                    "tax":  1200
+                                                }
+                                            ],
+                               "recentHistory":  [
+
+                                                 ],
+                               "currentAveragePrice":  7999.75,
+                               "currentAveragePriceNQ":  1500,
+                               "currentAveragePriceHQ":  14499.5,
+                               "regularSaleVelocity":  0,
+                               "nqSaleVelocity":  0,
+                               "hqSaleVelocity":  0,
+                               "averagePrice":  0,
+                               "averagePriceNQ":  0,
+                               "averagePriceHQ":  0,
+                               "minPrice":  1500,
+                               "minPriceNQ":  1500,
+                               "minPriceHQ":  4999,
+                               "maxPrice":  24000,
+                               "maxPriceNQ":  1500,
+                               "maxPriceHQ":  24000,
+                               "stackSizeHistogram":  {
+                                                          "1":  4
+                                                      },
+                               "stackSizeHistogramNQ":  {
+                                                            "1":  2
+                                                        },
+                               "stackSizeHistogramHQ":  {
+                                                            "1":  2
+                                                        },
+                               "worldName":  "Cactuar",
+                               "listingsCount":  4,
+                               "recentHistoryCount":  0,
+                               "unitsForSale":  4,
+                               "unitsSold":  0,
+                               "hasData":  true
+                           },
+                  "1605":  {
+                               "itemID":  1605,
+                               "worldID":  79,
+                               "lastUploadTime":  0,
+                               "listings":  [
+
+                                            ],
+                               "recentHistory":  [
+
+                                                 ],
+                               "currentAveragePrice":  0,
+                               "currentAveragePriceNQ":  0,
+                               "currentAveragePriceHQ":  0,
+                               "regularSaleVelocity":  0,
+                               "nqSaleVelocity":  0,
+                               "hqSaleVelocity":  0,
+                               "averagePrice":  0,
+                               "averagePriceNQ":  0,
+                               "averagePriceHQ":  0,
+                               "minPrice":  0,
+                               "minPriceNQ":  0,
+                               "minPriceHQ":  0,
+                               "maxPrice":  0,
+                               "maxPriceNQ":  0,
+                               "maxPriceHQ":  0,
+                               "stackSizeHistogram":  {
+
+                                                      },
+                               "stackSizeHistogramNQ":  {
+
+                                                        },
+                               "stackSizeHistogramHQ":  {
+
+                                                        },
+                               "worldName":  "Cactuar",
+                               "listingsCount":  0,
+                               "recentHistoryCount":  0,
+                               "unitsForSale":  0,
+                               "unitsSold":  0,
+                               "hasData":  false
+                           }
+              },
+    "worldID":  79,
+    "unresolvedItems":  null,
+    "worldName":  "Cactuar"
+}

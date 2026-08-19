@@ -27,7 +27,22 @@ internal sealed class SelfTest
     private const double UiTextContrast = 3.0;
     private const float MinRowHeight = 24f;
 
-    private readonly record struct Step(bool RailExpanded, int Section, Vector2? ForcedSize, string Phase);
+    /// <summary>
+    /// One staged frame.
+    /// </summary>
+    /// <param name="RailExpanded">Which rail state to draw in.</param>
+    /// <param name="Section">Which section to open.</param>
+    /// <param name="ForcedSize">A window size to force, or null to leave it alone.</param>
+    /// <param name="Phase">The label a failure is reported under.</param>
+    /// <param name="Measure">
+    /// Whether to assert over the frame this step produces.
+    /// </param>
+    private readonly record struct Step(
+        bool RailExpanded,
+        int Section,
+        Vector2? ForcedSize,
+        string Phase,
+        bool Measure = true);
 
     private readonly MainWindow main;
     private readonly Configuration configuration;
@@ -72,8 +87,29 @@ internal sealed class SelfTest
 
         // Narrow window: #13 found dense layouts overflowing when docked, where EMM gets under
         // 700px. The rail must survive the squeeze without the body scrolling sideways.
-        plan.Add(new Step(false, 0, new Vector2(640, 400), "narrow"));
-        plan.Add(new Step(false, MainWindow.SectionCount - 1, new Vector2(640, 400), "narrow"));
+        //
+        // EACH NARROW STEP IS DRAWN TWICE AND MEASURED ONCE, and the discarded frame is the whole
+        // point. ImGui reports a child's scroll extent from the content size measured at the END of
+        // the previous frame, so the first frame after a resize compares the OLD content width
+        // against the NEW window width. With every section drawing one short scaffold string that
+        // never mattered; the moment a section wraps its text to the content region, the frame the
+        // window shrinks on reports a scroll extent that does not exist and is gone by the next
+        // frame. Measuring the settled frame is what makes NARROW-NO-HSCROLL a statement about the
+        // layout rather than about the resize.
+        foreach (var section in new[] { 0, MainWindow.SectionCount - 1 })
+        {
+            plan.Add(new Step(false, section, new Vector2(640, 400), "narrow", Measure: false));
+            plan.Add(new Step(false, section, new Vector2(640, 400), "narrow"));
+        }
+
+        // THE SAME SQUEEZE WITH THE RAIL EXPANDED, which is the worst case for body width and was
+        // the configuration this phase did not cover. A 640px window with a 200px rail leaves the
+        // body around 400px, and a control laid out beside another one stops fitting - it is
+        // submitted, clipped by the child, and invisible, which from the outside looks exactly
+        // like a control that was never drawn. That is a whole in-game pass to diagnose, so the
+        // configuration is now tested rather than assumed.
+        plan.Add(new Step(true, MainWindow.SectionCount - 1, new Vector2(640, 400), "narrow-rail", Measure: false));
+        plan.Add(new Step(true, MainWindow.SectionCount - 1, new Vector2(640, 400), "narrow-rail"));
 
         main.IsOpen = true;
         step = -1;
@@ -96,7 +132,7 @@ internal sealed class SelfTest
         // report as a wall of failures rather than as "you closed the window".
         main.IsOpen = true;
 
-        if (awaitingFrame)
+        if (awaitingFrame && plan[step].Measure)
             EvaluateFrame(plan[step]);
 
         step++;
@@ -148,7 +184,9 @@ internal sealed class SelfTest
             UiProbe.ActiveSection == s.Section && UiProbe.BodyVertices > 0,
             $"section {UiProbe.ActiveSection} emitted {UiProbe.BodyVertices} vertices");
 
-        if (s.Phase == "narrow")
+        // Keyed on the forced size rather than on the phase name, so a new squeezed configuration
+        // gets the check by being squeezed rather than by being remembered.
+        if (s.ForcedSize is not null)
         {
             Check($"NARROW-NO-HSCROLL [{tag}]",
                 UiProbe.BodyScrollMaxX <= 0.5f,

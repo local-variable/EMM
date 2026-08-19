@@ -347,6 +347,168 @@ public sealed class MarketStore : IDisposable
     }
 
     /// <summary>
+    /// The most recent Snapshot of one Ware in one Market, or null where there is none.
+    ///
+    /// Separate from <see cref="ReadSnapshots"/> rather than "read the range and take the last"
+    /// because a surface asks this once a second: at an hourly cadence a thirty-day range is
+    /// several hundred Snapshots and their Listings, all of them materialised to keep one. This
+    /// finds the instant first and reads only that.
+    /// </summary>
+    /// <param name="ware">The Ware.</param>
+    /// <param name="world">The World whose board was observed.</param>
+    /// <param name="notBefore">Ignore observations older than this.</param>
+    /// <returns>The newest Snapshot in range, or null.</returns>
+    public Snapshot? LatestSnapshot(WareId ware, WorldId world, DateTimeOffset notBefore)
+    {
+        using var command = connection.CreateCommand();
+
+        command.CommandText =
+            $"""
+             SELECT MAX(observed_at) FROM {StoreSchema.SnapshotView}
+             WHERE item_id = $item AND quality = $quality AND world_id = $world
+               AND observed_at >= $from
+             """;
+
+        Parameter(command, "$item", (long)ware.ItemId);
+        Parameter(command, "$quality", (long)ware.Quality);
+        Parameter(command, "$world", (long)world.Id);
+        Parameter(command, "$from", notBefore.ToUnixTimeSeconds());
+
+        var value = command.ExecuteScalar();
+
+        if (value is null or DBNull)
+        {
+            return null;
+        }
+
+        var observedAt = DateTimeOffset.FromUnixTimeSeconds(
+            Convert.ToInt64(value, CultureInfo.InvariantCulture));
+
+        // Inclusive of that instant and exclusive one second later, so exactly one observation
+        // comes back rather than the whole range.
+        var snapshots = ReadSnapshots(ware, world, observedAt, observedAt.AddSeconds(1));
+
+        return snapshots.Count == 0 ? null : snapshots[^1];
+    }
+
+    /// <summary>
+    /// How old the Source's data already was, each time EMM read this World.
+    ///
+    /// The raw material for calibrating Freshness against a World rather than against a constant.
+    /// It is derived from rows the store already carries - every Snapshot records both when EMM
+    /// observed it and when the Source last learned anything - so the calibration costs no schema
+    /// and no extra fetch, and it describes the Worlds this Player actually reads rather than a
+    /// table shipped with the plugin.
+    ///
+    /// Observations whose Source reported no upload time contribute nothing and are left out
+    /// rather than counted as age zero.
+    /// </summary>
+    /// <param name="world">The World.</param>
+    /// <param name="from">Inclusive lower bound on the observation time.</param>
+    /// <param name="toExclusive">Exclusive upper bound.</param>
+    /// <returns>One age per observation, unordered.</returns>
+    public IReadOnlyList<TimeSpan> ReadUploadAges(
+        WorldId world,
+        DateTimeOffset from,
+        DateTimeOffset toExclusive)
+    {
+        using var command = connection.CreateCommand();
+
+        // DISTINCT over the observation rather than the row: a Snapshot is stored one row per
+        // Listing, and counting a board with forty Listings as forty observations would let the
+        // busiest Wares set the whole World's idea of what fresh means.
+        command.CommandText =
+            $"""
+             SELECT DISTINCT item_id, quality, observed_at, uploaded_at
+             FROM {StoreSchema.SnapshotView}
+             WHERE world_id = $world AND uploaded_at IS NOT NULL
+               AND observed_at >= $from AND observed_at < $to
+             """;
+
+        Parameter(command, "$world", (long)world.Id);
+        Parameter(command, "$from", from.ToUnixTimeSeconds());
+        Parameter(command, "$to", toExclusive.ToUnixTimeSeconds());
+
+        var ages = new List<TimeSpan>();
+
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            ages.Add(TimeSpan.FromSeconds(reader.GetInt64(2) - reader.GetInt64(3)));
+        }
+
+        return ages;
+    }
+
+    /// <summary>
+    /// Every Ware the store holds a Snapshot of on one World, raw or rolled up.
+    ///
+    /// What a sweep sweeps, until a later ticket seeds a tracked population of its own. Defined
+    /// over Snapshots rather than over Sales because a Snapshot is what a sweep refreshes, and
+    /// because the Sale table is the large one - answering this question from it would mean
+    /// scanning the bulk of the store to decide what to fetch.
+    /// </summary>
+    /// <param name="world">The World.</param>
+    /// <returns>The Wares, ordered by Item then Quality.</returns>
+    public IReadOnlyList<WareId> TrackedWares(WorldId world)
+    {
+        using var command = connection.CreateCommand();
+
+        command.CommandText =
+            $"""
+             SELECT item_id, quality FROM {StoreSchema.SnapshotView} WHERE world_id = $world
+             UNION
+             SELECT item_id, quality FROM {StoreSchema.SnapshotDaily} WHERE world_id = $world
+             ORDER BY item_id, quality
+             """;
+
+        Parameter(command, "$world", (long)world.Id);
+
+        var wares = new List<WareId>();
+
+        using var reader = command.ExecuteReader();
+
+        while (reader.Read())
+        {
+            wares.Add(new WareId((uint)reader.GetInt64(0), (Quality)reader.GetInt64(1)));
+        }
+
+        return wares;
+    }
+
+    /// <summary>
+    /// When the newest Sale the store holds for one Ware in one Market happened.
+    ///
+    /// What makes a history refresh incremental rather than a re-download: the window starts just
+    /// before this instead of at the beginning of the series, which is the difference between a
+    /// few kilobytes and the whole backfill every time.
+    /// </summary>
+    /// <param name="ware">The Ware.</param>
+    /// <param name="world">The World.</param>
+    /// <returns>The newest Sale's instant, or null where the store holds none.</returns>
+    public DateTimeOffset? NewestSaleAt(WareId ware, WorldId world)
+    {
+        using var command = connection.CreateCommand();
+
+        command.CommandText =
+            $"""
+             SELECT MAX(sold_at) FROM {StoreSchema.MarketSale}
+             WHERE item_id = $item AND quality = $quality AND world_id = $world
+             """;
+
+        Parameter(command, "$item", (long)ware.ItemId);
+        Parameter(command, "$quality", (long)ware.Quality);
+        Parameter(command, "$world", (long)world.Id);
+
+        var value = command.ExecuteScalar();
+
+        return value is null or DBNull
+            ? null
+            : DateTimeOffset.FromUnixTimeSeconds(Convert.ToInt64(value, CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>
     /// Removes one week of raw Snapshots by dropping its table, and rebuilds the view over what is
     /// left.
     ///

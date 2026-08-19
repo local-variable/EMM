@@ -20,6 +20,23 @@
       AutoRetainerAPI.pdb was already relying on.
     -->
     <AllowedReferenceRelatedFileExtensions>.pdb</AllowedReferenceRelatedFileExtensions>
+
+    <!--
+      EMM ships its own SQLite engine and loads it by full path; see Core's SqliteEngine.
+
+      RuntimeIdentifier is what keeps that from being expensive. SQLitePCLRaw.lib.e_sqlite3 carries
+      four architectures, and without a RID all four land under runtimes/ and all four go into
+      latest.zip - which is how a prior-art plugin ended up shipping 27.35 MB of native SQLite
+      where Dalamud can use exactly one of the files. Pinned to win-x64 it is one 1.89 MB binary in
+      the output root, which is also where the plugin looks for it at load.
+
+      SelfContained stays false: Dalamud supplies the runtime. AppendRuntimeIdentifierToOutputPath
+      is off so the output path remains bin/x64/<Config>/, which the packaging docs, the release
+      flow and tools/build-repo-json.ps1 all pin.
+    -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
   </PropertyGroup>
 
   <!-- Manifest fields. Copy settled on issue #8; see docs/plugin-metadata.md. -->
@@ -76,6 +93,13 @@ Buying is covered as well as selling: what to acquire, at what ceiling, within t
       ECommons is MIT.
     -->
     <PackageReference Include="ECommons" Version="3.2.1.17" />
+
+    <!--
+      The native SQLite binary itself. Core references the managed halves and deliberately not
+      this one: a library does not get to choose which engine its host ships, and the plugin is
+      the host. This is the file SqliteEngine is handed the path to at load.
+    -->
+    <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="3.53.3" />
 
     <!--
       AutoRetainerAPI is not published to NuGet, so it is vendored as a submodule pinned at

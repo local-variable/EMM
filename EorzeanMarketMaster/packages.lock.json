@@ -20,6 +20,33 @@
         "resolved": "3.2.1.17",
         "contentHash": "gIjvCFzqJApeyncqDegjvs2QFAVoXuwkrfFimhXWhu6x8zAloh8Wyu1Qu8BSym79HuTu4v5/U/HhNqkFy6uwoA=="
       },
+      "SQLitePCLRaw.lib.e_sqlite3": {
+        "type": "Direct",
+        "requested": "[3.53.3, )",
+        "resolved": "3.53.3",
+        "contentHash": "ZXiSbBkrlw2Of/dBqny/qtQol7dlThrUD8zH/jkQicCFm2yn2BbhKsQW0+YHAzhANWz4ZJCz7gvo88BwluVhkA=="
+      },
+      "Microsoft.Data.Sqlite.Core": {
+        "type": "Transitive",
+        "resolved": "10.0.11",
+        "contentHash": "hubA20AGenQ4Sx0ElWaPpB8DISjXpdx463+1zOGRslsT0e/t/06ITv+pHsop8CcJ0d8PZLfgnT7juCDVD79Dkw==",
+        "dependencies": {
+          "SQLitePCLRaw.core": "2.1.12"
+        }
+      },
+      "SQLitePCLRaw.core": {
+        "type": "Transitive",
+        "resolved": "3.0.5",
+        "contentHash": "k81AYXXRCw3Zj8rOhyBoCsx/U97KYDFI2CSKr/ijl5BwpsW/hX/4kBiDmerFaoust8nxBwa0IHQFw8MmSHRtnQ=="
+      },
+      "SQLitePCLRaw.provider.dynamic_cdecl": {
+        "type": "Transitive",
+        "resolved": "3.0.5",
+        "contentHash": "klKPnOtKelrJyZX3RmQ8QBMw5cCawe/LX+eAmrwUl1vgPtU0UcUE+W0iRPSE85imDwPZPwPAzANQKTYvyr6jIw==",
+        "dependencies": {
+          "SQLitePCLRaw.core": "3.0.5"
+        }
+      },
       "autoretainerapi": {
         "type": "Project",
         "dependencies": {
@@ -27,7 +54,20 @@
         }
       },
       "eorzeanmarketmaster.core": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "Microsoft.Data.Sqlite.Core": "[10.0.11, )",
+          "SQLitePCLRaw.core": "[3.0.5, )",
+          "SQLitePCLRaw.provider.dynamic_cdecl": "[3.0.5, )"
+        }
+      }
+    },
+    "net10.0-windows7.0/win-x64": {
+      "SQLitePCLRaw.lib.e_sqlite3": {
+        "type": "Direct",
+        "requested": "[3.53.3, )",
+        "resolved": "3.53.3",
+        "contentHash": "ZXiSbBkrlw2Of/dBqny/qtQol7dlThrUD8zH/jkQicCFm2yn2BbhKsQW0+YHAzhANWz4ZJCz7gvo88BwluVhkA=="
       }
     }
   }

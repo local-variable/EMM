@@ -18,7 +18,7 @@
 /// <param name="Tier">What EMM can do unaided in this session.</param>
 /// <param name="SellSpace">Listing slots per Retainer, and how many are already spoken for. Owned by #35.</param>
 /// <param name="Holdings">Every unit of every Ware the Player owns anywhere. Owned by #26.</param>
-/// <param name="Snapshots">Observed Listings, each carrying when it was observed. Owned by #23 and #24.</param>
+/// <param name="Snapshots">Observed Listings, each carrying when it was observed. Shape in Observations.cs.</param>
 /// <param name="History">Accumulated Sales per Ware per Scope. Owned by #25.</param>
 /// <param name="Strategies">Which Strategy applies where, Ware over Group over Retainer. Owned by #34.</param>
 /// <param name="Mandates">What EMM may do unattended, and the state of the seven guardrails. Owned by #38.</param>
@@ -75,14 +75,6 @@ public sealed record SellSpace(int Capacity, int Listed)
 /// that #27 exists to avoid.
 /// </summary>
 public sealed record Holding;
-
-/// <summary>
-/// The Listings for a Ware in a Market as observed at a single moment, carrying the time it was
-/// observed. Never "current" - by the time it is read it is already a record of the past.
-///
-/// Placeholder: shape owned by #23 (the store) and #24 (aggregator ingest).
-/// </summary>
-public sealed record Snapshot;
 
 /// <summary>
 /// The accumulated series of Sales for a Ware at a Scope. EMM builds it: no Source supplies

@@ -29,6 +29,19 @@ internal static class Guard
         return [.. value];
     }
 
+    /// <summary>
+    /// A count that has to count something.
+    ///
+    /// Here rather than at the call sites for the same reason as everything else in this file: a
+    /// Stack of zero units is not a smaller Listing, it is a Listing that does not exist, and it
+    /// would go on to divide a per-unit figure by nothing several tickets away from where it was
+    /// admitted.
+    /// </summary>
+    internal static int Positive(int value, string paramName, string message)
+        => value > 0
+            ? value
+            : throw new ArgumentOutOfRangeException(paramName, value, message);
+
     /// <summary>A string that has to say something.</summary>
     internal static string NotBlank(string? value, string paramName, string message)
     {

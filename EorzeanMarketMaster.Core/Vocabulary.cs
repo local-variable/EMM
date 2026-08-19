@@ -23,6 +23,17 @@ public enum Quality
 public readonly record struct WareId(uint ItemId, Quality Quality);
 
 /// <summary>
+/// A World: one game server, and the only place a board physically exists.
+///
+/// Carried on every observation the store holds, because a Market is one World's board and a
+/// figure from another World describes a Market the Player would have to travel to. Keyed on the
+/// game's own World id rather than the name: names are display text, they are localised, and the
+/// store outlives any particular rendering of them.
+/// </summary>
+/// <param name="Id">The game's own World table id.</param>
+public readonly record struct WorldId(uint Id);
+
+/// <summary>
 /// A Retainer, identified the way the automation surface EMM drives identifies it: by its name
 /// within its owning Character. There is no stable numeric id available on that surface, so
 /// keying on one here would mean inventing a mapping that the write path could not honour.
@@ -74,6 +85,26 @@ public enum Scope
 
     /// <summary>A group of Data Centres. Analysis only.</summary>
     Region,
+}
+
+/// <summary>
+/// Where an observation came from.
+///
+/// Stored on every row rather than inferred, because the three differ in Freshness and in
+/// trustworthiness and a figure blended from several has to be able to say so. It is also what
+/// makes an imported row identifiable after the fact: imported rows are irreplaceable, since the
+/// snapshot they were read out of gets overwritten by the plugin that owns it.
+/// </summary>
+public enum Source
+{
+    /// <summary>The aggregator EMM polls. Sampled, and as fresh as its last upload.</summary>
+    Aggregator,
+
+    /// <summary>A board the Player opened in game. Ground truth at the instant it was read.</summary>
+    OpenedBoard,
+
+    /// <summary>A store belonging to another plugin, read once. Not refetchable.</summary>
+    ImportedStore,
 }
 
 /// <summary>

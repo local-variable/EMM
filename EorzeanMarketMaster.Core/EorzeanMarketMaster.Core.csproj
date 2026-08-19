@@ -27,4 +27,25 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!--
+      The store. Three references and deliberately not a fourth.
+
+      Microsoft.Data.Sqlite.CORE, not Microsoft.Data.Sqlite: the latter drags in
+      SQLitePCLRaw.bundle_e_sqlite3, which initialises itself by loading "e_sqlite3" by BARE NAME.
+      Dalamud already has its own e_sqlite3 resident in the FFXIV process, and Windows resolves a
+      native import by base name against what is already loaded - so a bundle reference silently
+      binds EMM to whatever version the host happens to be carrying. Pairing .Core with
+      SQLitePCLRaw.core and the dynamic_cdecl provider is what lets SqliteEngine name the file it
+      wants by full path. EorzeanMarketMaster.Tests asserts that no bare-name provider is present.
+
+      The native library itself is NOT referenced here. A library does not get to decide which
+      binary its host ships; the plugin and the test project each pull SQLitePCLRaw.lib.e_sqlite3
+      and hand SqliteEngine the resulting path.
+    -->
+    <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="10.0.11" />
+    <PackageReference Include="SQLitePCLRaw.core" Version="3.0.5" />
+    <PackageReference Include="SQLitePCLRaw.provider.dynamic_cdecl" Version="3.0.5" />
+  </ItemGroup>
+
 </Project>

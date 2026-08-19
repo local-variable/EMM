@@ -7,6 +7,7 @@ using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 using EorzeanMarketMaster.Core;
+using EorzeanMarketMaster.Graph;
 using EorzeanMarketMaster.Ingest;
 using EorzeanMarketMaster.Probe;
 using EorzeanMarketMaster.Store;
@@ -58,6 +59,18 @@ public sealed class Plugin : IDalamudPlugin
     internal ScanHost? Scan { get; }
 
     /// <summary>
+    /// The History the Pricing section draws. Null where the store could not be opened - the
+    /// series is built from stored Sales, so with no store there is nothing to build one from.
+    /// </summary>
+    internal GraphHost? Chart { get; }
+
+    /// <summary>
+    /// Which Ware every surface is looking at. One object rather than one per section, so a
+    /// Freshness and a graph on screen together are always about the same Ware.
+    /// </summary>
+    private readonly Selection selection;
+
+    /// <summary>
     /// The decision seam. Every decision EMM makes will be made behind this one call, and this
     /// side of the boundary only ever fills a <see cref="WorldState"/> or applies an
     /// <see cref="Outcome"/>. It returns an empty Outcome today; the adapters that fill the state
@@ -98,7 +111,14 @@ public sealed class Plugin : IDalamudPlugin
 
         Log.Information("EMM {Status}", storeHost.Status);
 
-        Scan = storeHost.Store is null ? null : new ScanHost(storeHost.Store, Configuration);
+        selection = new Selection(Configuration);
+
+        Scan = storeHost.Store is null
+            ? null
+            : new ScanHost(storeHost.Store, storeHost.Gate, Configuration, selection);
+        Chart = storeHost.Store is null
+            ? null
+            : new GraphHost(storeHost.Store, storeHost.Gate, selection);
 
         CommandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
@@ -177,9 +197,11 @@ public sealed class Plugin : IDalamudPlugin
         // nobody is looking at is a cost with no reader.
         if (mainWindow.IsOpen)
         {
-            Scan?.Tick(
-                DateTimeOffset.UtcNow,
-                PlayerState.IsLoaded ? new WorldId(PlayerState.HomeWorld.RowId) : null);
+            var now = DateTimeOffset.UtcNow;
+            WorldId? world = PlayerState.IsLoaded ? new WorldId(PlayerState.HomeWorld.RowId) : null;
+
+            Scan?.Tick(now, world);
+            Chart?.Tick(now, world);
         }
 
         windowSystem.Draw();

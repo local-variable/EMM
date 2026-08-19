@@ -38,11 +38,12 @@ internal sealed record ScanView(
 /// The plugin side of ingest: holds the sweep floor across a session, drives a refresh off the
 /// framework thread, and keeps a view of the store for the Scan surface to draw.
 ///
-/// <b>Store access is serialised here and nowhere else.</b> The store is one SQLite connection and
-/// a connection is not something two threads may share, so every touch of it goes through one
-/// gate: a refresh holds it for its whole run, and the surface's periodic read gives up
-/// immediately rather than waiting, showing the previous reading for as long as a refresh is in
-/// flight. A frame that blocked on a sweep would be a frozen game.
+/// <b>Store access is serialised through the gate <see cref="Store.StoreHost"/> owns.</b> The
+/// store is one SQLite connection and a connection is not something two threads may share, so
+/// every touch of it goes through that one gate: a refresh holds it for its whole run, and the
+/// surface's periodic read gives up immediately rather than waiting, showing the previous reading
+/// for as long as a refresh is in flight. A frame that blocked on a sweep would be a frozen game.
+/// The gate used to live here, which was true only while this was the store's one reader.
 ///
 /// <b>Nothing but the framework thread writes <see cref="View"/>.</b> The refresh task publishes
 /// its report to one field and the next tick folds it in. A record swapped from two threads would
@@ -73,13 +74,14 @@ internal sealed class ScanHost : IDisposable
 
     private readonly MarketStore store;
     private readonly Configuration configuration;
+    private readonly Selection selection;
     private readonly UniversalisTransport transport = new();
     private readonly RealPacing pacing = new();
     private readonly SweepGate gate;
-    private readonly SemaphoreSlim storeGate = new(1, 1);
+    private readonly SemaphoreSlim storeGate;
     private readonly CancellationTokenSource cancellation = new();
 
-    private WareId selected;
+    private int selectedRevision = -1;
     private WorldId? calibratedFor;
     private WorldFreshness? calibration;
     private FetchPlan? sweepPlan;
@@ -91,34 +93,25 @@ internal sealed class ScanHost : IDisposable
     /// <summary>Written by the refresh task, read by the framework thread. Nothing else crosses.</summary>
     private volatile IngestReport? lastReport;
 
-    internal ScanHost(MarketStore store, Configuration configuration)
+    internal ScanHost(MarketStore store, SemaphoreSlim storeGate, Configuration configuration, Selection selection)
     {
         this.store = store;
+        this.storeGate = storeGate;
         this.configuration = configuration;
+        this.selection = selection;
 
         gate = new SweepGate(configuration.LastSweepStartedAt);
-        selected = new WareId(
-            configuration.ScanItemId,
-            configuration.ScanHighQuality ? Quality.High : Quality.Normal);
     }
 
     /// <summary>What the surface draws. Replaced wholesale, so a frame never sees half an update.</summary>
     internal ScanView View { get; private set; } = ScanView.Empty;
 
     /// <summary>Which Ware the Player is looking at.</summary>
-    internal WareId Selected => selected;
+    internal WareId Selected => selection.Ware;
 
-    /// <summary>Points the surface at a different Ware and forces its reading to be rebuilt.</summary>
+    /// <summary>Points every surface at a different Ware and forces this one's reading to be rebuilt.</summary>
     /// <param name="ware">The Ware.</param>
-    internal void Select(WareId ware)
-    {
-        selected = ware;
-        configuration.ScanItemId = ware.ItemId;
-        configuration.ScanHighQuality = ware.Quality == Quality.High;
-        configuration.Save();
-
-        nextReading = DateTimeOffset.MinValue;
-    }
+    internal void Select(WareId ware) => selection.Select(ware);
 
     /// <summary>
     /// Rebuilds the view where it is due. Called once a frame; does almost nothing most frames.
@@ -134,9 +127,18 @@ internal sealed class ScanHost : IDisposable
             nextPopulation = DateTimeOffset.MinValue;
         }
 
+        // The Ware is shared with every other surface, so it can change without this host having
+        // been the one asked. Watching the revision is what keeps the reading in step with what
+        // the Player picked, wherever they picked it.
+        if (selectedRevision != selection.Revision)
+        {
+            selectedRevision = selection.Revision;
+            nextReading = DateTimeOffset.MinValue;
+        }
+
         if (world is not { } here)
         {
-            View = ScanView.Empty with { Ware = selected, LastReport = lastReport };
+            View = ScanView.Empty with { Ware = selection.Ware, LastReport = lastReport };
             return;
         }
 
@@ -181,13 +183,15 @@ internal sealed class ScanHost : IDisposable
 
                 nextReading = now + ReadingInterval;
 
+                var ware = selection.Ware;
+
                 View = new ScanView(
                     here,
-                    selected,
+                    ware,
                     StoredMarket.Latest(
-                        store, selected, here, calibration ?? Uncalibrated(here), now, ReadWindow),
+                        store, ware, here, calibration ?? Uncalibrated(here), now, ReadWindow),
                     FetchPlan.For(
-                        here, [selected], ListingWindow.Standard, HistoryFor(here, selected, now)).Cost,
+                        here, [ware], ListingWindow.Standard, HistoryFor(here, ware, now)).Cost,
                     sweepPlan is null ? null : gate.Assess(sweepPlan, now),
                     trackedWares,
                     lastReport,
@@ -227,7 +231,9 @@ internal sealed class ScanHost : IDisposable
 
         try
         {
-            plan = FetchPlan.For(world, [selected], ListingWindow.Standard, HistoryFor(world, selected, now));
+            var ware = selection.Ware;
+
+            plan = FetchPlan.For(world, [ware], ListingWindow.Standard, HistoryFor(world, ware, now));
         }
         finally
         {
@@ -292,7 +298,10 @@ internal sealed class ScanHost : IDisposable
 
         cancellation.Dispose();
         transport.Dispose();
-        storeGate.Dispose();
+
+        // The store gate is NOT disposed here. It belongs to StoreHost, which outlives this and
+        // hands the same one to every other reader; disposing a borrowed gate would take the graph
+        // down with the scan.
     }
 
     /// <summary>A World EMM has seen nothing of, so that a reading can still be produced for it.</summary>

@@ -40,7 +40,7 @@ internal static class ScanTab
     {
         if (host is null)
         {
-            ImGui.TextWrapped(
+            Layout.TextWrapped(
                 "The store could not be opened, so there is nowhere to put what a refresh would " +
                 "fetch. EMM is running without it; see the log for why.");
             return;
@@ -53,12 +53,12 @@ internal static class ScanTab
 
         DrawReading(view);
         ImGui.Spacing();
-        ImGui.Separator();
+        Layout.Separator();
         ImGui.Spacing();
 
         DrawRefreshControls(host, view);
         ImGui.Spacing();
-        ImGui.Separator();
+        Layout.Separator();
         ImGui.Spacing();
 
         DrawCeilings();
@@ -66,7 +66,7 @@ internal static class ScanTab
         if (view.LastReport is { } report)
         {
             ImGui.Spacing();
-            ImGui.Separator();
+            Layout.Separator();
             ImGui.Spacing();
             DrawLastRefresh(report);
         }
@@ -99,11 +99,11 @@ internal static class ScanTab
         }
 
         ImGui.PushStyleColor(ImGuiCol.Text, Palette.Muted);
-        ImGui.TextWrapped(NameOf(host.Selected));
+        Layout.TextWrapped(NameOf(host.Selected));
 
         if (view.World is null)
         {
-            ImGui.TextWrapped("Not logged in, so there is no World to read a board on.");
+            Layout.TextWrapped("Not logged in, so there is no World to read a board on.");
         }
 
         ImGui.PopStyleColor();
@@ -114,7 +114,7 @@ internal static class ScanTab
     {
         if (view.Reading is not { HasObservation: true } reading || reading.Snapshot is null)
         {
-            ImGui.TextWrapped(
+            Layout.TextWrapped(
                 "Nothing observed yet. EMM shows what it has stored and never fetches behind a " +
                 "draw, so this stays empty until a refresh is asked for.");
             return;
@@ -131,7 +131,7 @@ internal static class ScanTab
         ImGui.TextColored(GradeColour(reading.Grade), Age(reading.Age));
 
         ImGui.PushStyleColor(ImGuiCol.Text, Palette.Muted);
-        ImGui.TextWrapped(GradeOf(reading.Grade, reading.Calibration));
+        Layout.TextWrapped(GradeOf(reading.Grade, reading.Calibration));
         ImGui.PopStyleColor();
 
         var listings = reading.Snapshot.Listings;
@@ -192,7 +192,7 @@ internal static class ScanTab
             // wrapping or scrolling. The control is submitted, is hit-testable, and cannot be
             // seen, which from the outside is indistinguishable from a control that was never
             // drawn. That cost a whole in-game pass to find, so the widths are checked instead.
-            if (FitsBeside(RefreshEverythingLabel))
+            if (Layout.FitsBeside(RefreshEverythingLabel))
             {
                 ImGui.SameLine();
             }
@@ -208,11 +208,11 @@ internal static class ScanTab
         }
 
         ImGui.PushStyleColor(ImGuiCol.Text, Palette.Muted);
-        ImGui.TextWrapped(view.PointCost is { } point
+        Layout.TextWrapped(view.PointCost is { } point
             ? $"This Ware: {Cost(point)}"
             : "This Ware: no cost to quote yet");
 
-        ImGui.TextWrapped(sweep is null
+        Layout.TextWrapped(sweep is null
             ? "Everything tracked: nothing is tracked on this World yet, so there is nothing to refresh."
             : $"Everything tracked: {view.TrackedWares:N0} Wares - {Cost(sweep.Cost)}");
 
@@ -221,7 +221,7 @@ internal static class ScanTab
         if (sweep is not null && queued)
         {
             ImGui.PushStyleColor(ImGuiCol.Text, Palette.Gold);
-            ImGui.TextWrapped(
+            Layout.TextWrapped(
                 $"Queued. Refreshing everything runs at most once every {Minutes(Citizenship.SweepFloor)}; " +
                 $"this one can start in {Countdown(sweep.Countdown)}.");
             ImGui.PopStyleColor();
@@ -240,7 +240,7 @@ internal static class ScanTab
     private static void DrawCeilings()
     {
         ImGui.PushStyleColor(ImGuiCol.Text, Palette.Gold);
-        ImGui.TextWrapped(
+        Layout.TextWrapped(
             $"{Citizenship.SustainedRequestsPerSecond:0.#} request/second - " +
             $"{Citizenship.MaxConnections} connections - one refresh of everything per " +
             $"{Minutes(Citizenship.SweepFloor)}. Fixed in code, not settings.");
@@ -251,23 +251,23 @@ internal static class ScanTab
             return;
         }
 
-        ImGui.TextWrapped(
+        Layout.TextWrapped(
             $"{Citizenship.SustainedRequestsPerSecond:0.#} request per second, which is " +
             $"{Citizenship.ShareOfPublishedRate:P0} of the {Citizenship.PublishedRequestsPerSecond:0.#} " +
             "per second it publishes. No burst allowance is claimed at all: the limits are counted " +
             "per address and EMM may not be the only thing behind yours.");
 
-        ImGui.TextWrapped(
+        Layout.TextWrapped(
             $"At most {Citizenship.MaxConnections} connections against the " +
             $"{Citizenship.PublishedMaxConnections} it allows - and requests go one at a time, so " +
             "one is what is ever open.");
 
-        ImGui.TextWrapped(
+        Layout.TextWrapped(
             $"Refreshing everything runs at most once every {Minutes(Citizenship.SweepFloor)}. " +
             "Refreshing a single Ware is not the same thing and is never held back.");
 
         ImGui.PushStyleColor(ImGuiCol.Text, Palette.Muted);
-        ImGui.TextWrapped(
+        Layout.TextWrapped(
             "These are fixed in EMM's code. There is no setting for them and there will not be one.");
         ImGui.PopStyleColor();
     }
@@ -282,13 +282,13 @@ internal static class ScanTab
 
         if (!report.Ran)
         {
-            ImGui.TextWrapped(
+            Layout.TextWrapped(
                 $"Held back: refreshing everything runs at most once every " +
                 $"{Minutes(Citizenship.SweepFloor)}. Nothing was sent.");
             return;
         }
 
-        ImGui.TextWrapped(
+        Layout.TextWrapped(
             $"{report.RequestsMade} of {report.Batches.Count} requests answered, " +
             $"{Bytes(report.BytesReceived)} received against {Bytes(report.Verdict.Cost.EstimatedBytes)} " +
             $"estimated. {report.SnapshotsWritten} observations and {report.SalesWritten} new Sales stored.");
@@ -298,14 +298,14 @@ internal static class ScanTab
             var first = report.Batches.First(batch => !batch.Succeeded);
 
             ImGui.PushStyleColor(ImGuiCol.Text, Palette.Muted);
-            ImGui.TextWrapped(
+            Layout.TextWrapped(
                 $"{report.RequestsFailed} did not answer: {first.Failure}. EMM kept what it already held.");
             ImGui.PopStyleColor();
         }
 
         if (report.WithoutData.Count > 0)
         {
-            ImGui.TextWrapped(
+            Layout.TextWrapped(
                 $"{report.WithoutData.Count} Wares came back with nothing at all. That is not the " +
                 "same as an empty board - the Source cannot tell the two apart - so nothing was " +
                 "stored for them rather than a bare board being recorded on its behalf.");
@@ -314,22 +314,9 @@ internal static class ScanTab
         if (report.DiscardedRows > 0)
         {
             ImGui.PushStyleColor(ImGuiCol.Text, Palette.Muted);
-            ImGui.TextWrapped($"{report.DiscardedRows} rows were not believable and were dropped.");
+            Layout.TextWrapped($"{report.DiscardedRows} rows were not believable and were dropped.");
             ImGui.PopStyleColor();
         }
-    }
-
-    /// <summary>
-    /// Whether a button carrying this label still fits on the line just drawn.
-    /// </summary>
-    /// <param name="label">The button's visible text, without its id suffix.</param>
-    /// <returns>Whether to put it on the same line.</returns>
-    private static bool FitsBeside(string label)
-    {
-        var style = ImGui.GetStyle();
-        var needed = ImGui.CalcTextSize(label).X + (style.FramePadding.X * 2f) + style.ItemSpacing.X;
-
-        return needed <= ImGui.GetContentRegionAvail().X;
     }
 
     private static string NameOf(WareId ware)

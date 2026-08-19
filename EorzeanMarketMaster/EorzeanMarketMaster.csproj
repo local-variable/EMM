@@ -11,6 +11,15 @@
 
   <PropertyGroup>
     <Version>0.0.0.1</Version>
+
+    <!--
+      Core is built with GenerateDocumentationFile so that a missing XML comment is a build error
+      there. That produces a 41 KB EorzeanMarketMaster.Core.xml which MSBuild would otherwise copy
+      here and DalamudPackager would ship to every user, where it is inert weight. Narrowing the
+      related-file extensions to .pdb drops the doc file and keeps the symbols, which the vendored
+      AutoRetainerAPI.pdb was already relying on.
+    -->
+    <AllowedReferenceRelatedFileExtensions>.pdb</AllowedReferenceRelatedFileExtensions>
   </PropertyGroup>
 
   <!-- Manifest fields. Copy settled on issue #8; see docs/plugin-metadata.md. -->
@@ -43,6 +52,20 @@ Buying is covered as well as selling: what to acquire, at what ceiling, within t
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Visible>false</Visible>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      The decision layer. The arrow points this way and only this way: the plugin knows about
+      Core, Core knows nothing about the plugin, Dalamud, or the game. Core is a plain net10.0
+      library, which this net10.0-windows project can consume but not the reverse - that
+      asymmetry is enforced by the target frameworks rather than by anyone's discipline.
+
+      Do not add a Dalamud, ImGui, FFXIVClientStructs, Lumina, ECommons or AutoRetainerAPI
+      reference to Core. EorzeanMarketMaster.Tests asserts that none of them are there, because
+      the moment one is, the seam stops being testable without a running client.
+    -->
+    <ProjectReference Include="..\EorzeanMarketMaster.Core\EorzeanMarketMaster.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

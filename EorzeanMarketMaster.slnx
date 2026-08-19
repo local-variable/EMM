@@ -3,4 +3,6 @@
     <Project Path="vendor/AutoRetainerAPI/AutoRetainerAPI/AutoRetainerAPI.csproj" />
   </Folder>
   <Project Path="EorzeanMarketMaster/EorzeanMarketMaster.csproj" />
+  <Project Path="EorzeanMarketMaster.Core/EorzeanMarketMaster.Core.csproj" />
+  <Project Path="EorzeanMarketMaster.Tests/EorzeanMarketMaster.Tests.csproj" />
 </Solution>

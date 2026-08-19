@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    xunit against Core alone. No Dalamud reference here either: a test project that could load
+    the game host would invite tests that need one, and the whole value of this seam is that it
+    runs with no game, no network, no clock and no ImGui.
+
+    Pinned to xunit.v3 3.2.2 rather than the 4.0.0 that shipped on 2026-08-15. 4.0.0 is a major
+    version three days old at the time this project was created; 3.2.2 has been the settled v3
+    release since 2026-01-14. Revisit once 4.x has some road behind it.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Platforms>x64</Platforms>
+    <Configurations>Debug;Release</Configurations>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\EorzeanMarketMaster.Core\EorzeanMarketMaster.Core.csproj" />
+  </ItemGroup>
+
+</Project>

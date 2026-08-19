@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The decision layer. Deliberately NOT built on Dalamud.NET.Sdk: this project must not be able
+    to reference the game host even by accident, and the plainest way to guarantee that is to
+    give it an SDK that never puts Dalamud on the reference path in the first place.
+
+    TargetFramework is net10.0, not net10.0-windows. The plugin's net10.0-windows can consume
+    this; the reverse is not true, and that asymmetry is the point - it is what stops a Windows-
+    or game-only type leaking down into the decision layer.
+
+    Platforms is x64 because the plugin is pinned to x64 by Dalamud.NET.Sdk. Building the plugin
+    with -p:Platform=x64 propagates Platform=x64 into every project it references, and a project
+    that only knows AnyCPU fails that build with an unset-OutputPath error rather than anything
+    that names the real cause. Configurations is restated for the same reason.
+  -->
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Platforms>x64</Platforms>
+    <Configurations>Debug;Release</Configurations>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+</Project>

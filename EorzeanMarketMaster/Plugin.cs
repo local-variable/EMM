@@ -6,6 +6,7 @@ using Dalamud.Interface.Windowing;
 using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
+using EorzeanMarketMaster.Core;
 using EorzeanMarketMaster.Probe;
 using EorzeanMarketMaster.Ui;
 
@@ -42,6 +43,14 @@ public sealed class Plugin : IDalamudPlugin
     private readonly LiveProbe probe;
     private readonly AutoRetainerWatch autoRetainer;
 
+    /// <summary>
+    /// The decision seam. Every decision EMM makes will be made behind this one call, and this
+    /// side of the boundary only ever fills a <see cref="WorldState"/> or applies an
+    /// <see cref="Outcome"/>. It returns an empty Outcome today; the adapters that fill the state
+    /// arrive with the tickets that follow.
+    /// </summary>
+    private readonly DecisionEngine engine = new();
+
     public Plugin()
     {
         Configuration = PluginInterface.GetPluginConfig() as Configuration ?? new Configuration();
@@ -76,6 +85,30 @@ public sealed class Plugin : IDalamudPlugin
 
         EnvironmentSummary = DescribeEnvironment();
         Log.Information("EMM scaffold loaded. {Summary}", EnvironmentSummary);
+
+        // Same reasoning as DescribeEnvironment's vendored-dependency check: a project reference
+        // that resolves at build time proves nothing about whether the packager laid the assembly
+        // down beside the plugin. Calling across the seam once at load is what shows it did.
+        // Log only - this is a developer-facing fact, not a line for the status strip.
+        //
+        // What the catch does and does not cover, stated rather than assumed. It does NOT catch a
+        // missing EorzeanMarketMaster.Core.dll: the `engine` field initialiser runs at the top of
+        // this constructor, before this block, and a genuinely absent assembly fails the load
+        // there. That is the right outcome anyway - EMM cannot decide anything without its
+        // decision layer - and Dalamud reports it plainly. What the catch does cover is Evaluate
+        // itself throwing, which it cannot today and will be able to as the tickets below fill it
+        // in. A startup diagnostic that takes the whole plugin down with it is a bad trade.
+        try
+        {
+            var startup = engine.Evaluate(WorldState.Empty);
+            Log.Information(
+                "EMM Core linked - Evaluate returned {Proposals} Proposals, {Holds} Holds, {Notices} Notices, {Estimates} Estimates",
+                startup.Proposals.Count, startup.Holds.Count, startup.Notices.Count, startup.Estimates.Count);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "EMM Core FAILED to load - the decision seam is unreachable");
+        }
     }
 
     public void Dispose()

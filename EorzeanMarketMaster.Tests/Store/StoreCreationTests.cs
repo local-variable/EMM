@@ -78,13 +78,16 @@ public class StoreCreationTests
 
         var tables = TableNames(temp.Path);
 
-        Assert.Equal(1, store.SchemaVersion);
+        // The literal, not StoreSchema.Version. A store in the wild has already run the steps this
+        // number counts, so moving it is a deliberate act and this case is what makes it one.
+        Assert.Equal(2, store.SchemaVersion);
         Assert.Equal(store.SchemaVersion, Pragma(temp.Path, "user_version"));
 
         foreach (var expected in new[]
                  {
                      "market_sale", "market_sale_daily", "snapshot_daily",
                      "own_sale", "lot", "proposal", "levy_reading", "calibration",
+                     "holding_reading", "holding",
                  })
         {
             Assert.Contains(expected, tables);
@@ -106,7 +109,7 @@ public class StoreCreationTests
         // rather than reopened would be empty and would still pass a version check.
         using var second = MarketStore.OpenOrCreate(temp.Path);
 
-        Assert.Equal(1, second.SchemaVersion);
+        Assert.Equal(2, second.SchemaVersion);
         Assert.Single(second.ReadSnapshots(
             StoreFixture.Ware, StoreFixture.World, StoreFixture.Instant.AddDays(-1), StoreFixture.Instant.AddDays(1)));
     }

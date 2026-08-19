@@ -69,6 +69,18 @@ internal static class Layout
     }
 
     /// <summary>
+    /// The width a sized item may occupy without ever reaching the edge.
+    ///
+    /// The same arithmetic <see cref="TextWrapped"/> and <see cref="Separator"/> already use, named
+    /// because a table cannot wrap. Text that overruns is clipped and looks wrong; a table that
+    /// overruns takes the whole body's content size with it and the section starts scrolling
+    /// sideways, which the self-test fails outright.
+    /// </summary>
+    /// <returns>The available width, less a scrollbar.</returns>
+    internal static float BodyWidth() =>
+        MathF.Max(ImGui.GetContentRegionAvail().X - ImGui.GetStyle().ScrollbarSize, 1f);
+
+    /// <summary>
     /// A horizontal rule that stays inside the content region even when the body scrolls.
     ///
     /// <b><c>ImGui.Separator()</c> spans the work rect, and the work rect is wider than the

@@ -98,6 +98,17 @@ internal static class PricingTab
 
         UiProbe.Widest("item selector");
 
+        // The icon before the name, at the Quality the selection is actually for - the graph is
+        // drawn per Item and both its Wares can be layered on it, but the selection underneath is a
+        // Ware, and illustrating an HQ selection with the NQ icon would quietly disagree with the
+        // overlay above it.
+        //
+        // Drawn before the wrapped name rather than beside it with a SameLine of its own: the wrap
+        // position is computed from the cursor, so the name wraps to what is left after the icon
+        // instead of to the full body width - which at the size the self-test drives this at would
+        // be an icon's worth over the edge.
+        WareIcon.Inline(new WareId(host.Item, host.Quality));
+
         ImGui.PushStyleColor(ImGuiCol.Text, Palette.Muted);
         Layout.TextWrapped(NameOf(host.Item));
         ImGui.PopStyleColor();
@@ -329,19 +340,5 @@ internal static class PricingTab
     };
 
     private static string NameOf(uint itemId)
-    {
-        try
-        {
-            var sheet = Plugin.DataManager.GetExcelSheet<Lumina.Excel.Sheets.Item>();
-            var name = sheet.GetRowOrDefault(itemId)?.Name.ExtractText();
-
-            return string.IsNullOrWhiteSpace(name) ? $"Item {itemId}" : name;
-        }
-        catch (Exception ex)
-        {
-            Plugin.Log.Warning(ex, "Could not read the name of item {ItemId}", itemId);
-
-            return $"Item {itemId}";
-        }
-    }
+        => ItemFacts.Name(itemId);
 }

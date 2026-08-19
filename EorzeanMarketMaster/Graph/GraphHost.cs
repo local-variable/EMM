@@ -62,6 +62,15 @@ internal sealed class GraphHost
     internal uint Item => selection.Ware.ItemId;
 
     /// <summary>
+    /// Which of the Item's two Wares the shared selection is on.
+    ///
+    /// The graph is drawn per Item, so this is not what decides which layers appear - the overlay
+    /// is. It is what anything illustrating the selection has to use, because an Item has two icons
+    /// and picking the wrong one contradicts the Scan section looking at the same Ware.
+    /// </summary>
+    internal Quality Quality => selection.Ware.Quality;
+
+    /// <summary>
     /// Points every surface at a different Item, keeping the Quality the Player last chose.
     ///
     /// The graph is drawn per Item because HQ and NQ are an overlay on one axis, but the selection

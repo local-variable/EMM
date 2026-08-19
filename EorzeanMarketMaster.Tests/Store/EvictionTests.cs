@@ -158,10 +158,15 @@ public class EvictionTests
         // Own Sales because there is no sale event to replay; Lots because a Cost Basis cannot be
         // recovered after acquisition; the Proposal Ledger because it is the audit trail the
         // guardrails require; Levy readings because a past rate is never republished; calibration
-        // because a re-measured threshold is judged against its own history; and both rollups
-        // because they are what is left once the raw rows they came from have gone.
+        // because a re-measured threshold is judged against its own history; both rollups because
+        // they are what is left once the raw rows they came from have gone; and both Holdings
+        // tables because Retainer stock is only ground truth while that Retainer is open - no
+        // Source can produce a Retainer's contents again, only the Player standing at a bell.
         Assert.Equal(
-            ["calibration", "levy_reading", "lot", "market_sale_daily", "own_sale", "proposal", "snapshot_daily"],
+            [
+                "calibration", "holding", "holding_reading", "levy_reading", "lot",
+                "market_sale_daily", "own_sale", "proposal", "snapshot_daily",
+            ],
             store.ProtectedRowCounts().Keys.Order(StringComparer.Ordinal));
     }
 

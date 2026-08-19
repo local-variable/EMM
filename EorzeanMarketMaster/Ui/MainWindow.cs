@@ -18,12 +18,20 @@ namespace EorzeanMarketMaster.Ui;
 /// </summary>
 public sealed class MainWindow : Window, IDisposable
 {
-    /// <summary>Size cycle from #13: the window must be resizable, not two fixed sizes.</summary>
+    /// <summary>
+    /// Size cycle from #13: the window must be resizable, not two fixed sizes.
+    ///
+    /// The smallest was raised from 880x520 once Holdings had a table in it. A section whose
+    /// natural shape is columns needs room for them, and the old first preset put the window in
+    /// its own compact mode by default - which is the fallback for a docked window, not the thing
+    /// a Player should meet first. An install that has already saved a size keeps it: the window
+    /// is sized on first use only, so this moves the default and nothing else.
+    /// </summary>
     internal static readonly Vector2[] SizePresets =
     [
-        new(880, 520),
-        new(1180, 720),
-        new(1480, 900),
+        new(1100, 660),
+        new(1400, 840),
+        new(1700, 1000),
     ];
 
     // Names only. The six sections come from issue #13 and are approved copy; describing what
@@ -47,7 +55,7 @@ public sealed class MainWindow : Window, IDisposable
     /// most likely to be broken. That is the harness gap the sweep control fell through, and it
     /// costs an in-game pass to find.
     /// </summary>
-    private static readonly string[] Built = ["Pricing", "Scan"];
+    private static readonly string[] Built = ["Pricing", "Holdings", "Scan"];
 
     private const float RailCollapsedWidth = 58f;
     private const float RailExpandedWidth = 200f;
@@ -335,7 +343,7 @@ public sealed class MainWindow : Window, IDisposable
             // cannot see.
             ImGui.BeginGroup();
 
-            // Two sections have bodies now. The rest are still the scaffold, and saying so is
+            // Three sections have bodies now. The rest are still the scaffold, and saying so is
             // better than a plausible-looking empty panel.
             switch (label)
             {
@@ -344,6 +352,9 @@ public sealed class MainWindow : Window, IDisposable
                     break;
                 case "Pricing":
                     PricingTab.Draw(plugin.Chart);
+                    break;
+                case "Holdings":
+                    HoldingsTab.Draw(plugin.Owned);
                     break;
                 default:
                     ImGui.TextColored(Palette.Muted, "Not built yet — this is the scaffold.");

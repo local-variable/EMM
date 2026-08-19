@@ -37,7 +37,7 @@ internal static class StoreSchema
     /// The schema this build expects. A store below it is migrated forward on open; a store above
     /// it was written by a newer EMM and is refused rather than guessed at.
     /// </summary>
-    internal const int Version = 1;
+    internal const int Version = 2;
 
     /// <summary>The view every reader of raw Snapshots goes through, whatever partitions exist.</summary>
     internal const string SnapshotView = "snapshot";
@@ -50,6 +50,19 @@ internal static class StoreSchema
 
     /// <summary>Daily aggregates of Market Sales. The destination of the second rung.</summary>
     internal const string MarketSaleDaily = "market_sale_daily";
+
+    /// <summary>
+    /// One row per place EMM has read Holdings in, carrying when and from what Source.
+    ///
+    /// It exists separately from <see cref="Holding"/> because "EMM opened this Retainer and it was
+    /// empty" has to be storable, and a place recorded only by its rows would have none - making a
+    /// sold-out Retainer indistinguishable from one never visited. The Snapshot table already paid
+    /// for this lesson.
+    /// </summary>
+    internal const string HoldingReading = "holding_reading";
+
+    /// <summary>Units of a Ware in one place, as last seen.</summary>
+    internal const string Holding = "holding";
 
     /// <summary>
     /// The columns of a raw Snapshot row, in the order every partition and the view over them
@@ -85,6 +98,15 @@ internal static class StoreSchema
             // audit trail the guardrails require, a Levy reading is a reading with an expiry and
             // the past rate is never republished, and the calibration history is what a re-measured
             // threshold is judged against.
+            // Holdings are Irreplaceable and it is worth saying why, because they look refetchable
+            // and are not. Retainer stock is only ground truth while that Retainer is open, and
+            // nothing in the game or on any Source can produce a Retainer's contents again - only
+            // the Player, standing at a summoning bell, opening it. Evicting a reading would
+            // therefore not cost a refetch; it would cost the record, and there would be no way to
+            // get it back except by asking the Player to walk thirty Retainers.
+            [HoldingReading] = RetentionClass.Irreplaceable,
+            [Holding] = RetentionClass.Irreplaceable,
+
             ["own_sale"] = RetentionClass.Irreplaceable,
             ["lot"] = RetentionClass.Irreplaceable,
             ["proposal"] = RetentionClass.Irreplaceable,
@@ -267,6 +289,66 @@ internal static class StoreSchema
                 parameters TEXT    NOT NULL
             )
             """,
+        ]),
+
+        new MigrationStep(2,
+        [
+            // Where EMM has looked for Holdings, and when.
+            //
+            // retainer_name is the empty string for a Character's own bags, and that is a sentinel
+            // rather than a NULL for one reason: a WITHOUT ROWID table requires every primary key
+            // column to be NOT NULL, so NULL is not available here. It is safe where the Levy
+            // work's rejected sentinel was not - 0 is a legal gil rate and cannot be told apart
+            // from a missing one, whereas the empty string is not a name the game will ever give a
+            // Retainer.
+            //
+            // true_as_of is nullable and carries the ticket's hardest fact. It is when the Source
+            // last knew the contents to be true, which for EMM's own reader is observed_at and for
+            // a companion plugin is unknown - it answers from a cache and does not report when it
+            // last looked. Storing observed_at into both would present a week-old Retainer as read
+            // seconds ago, which is the market side's uploaded_at lesson repeated on inventory.
+            $"""
+             CREATE TABLE {HoldingReading} (
+                 character_name TEXT    NOT NULL,
+                 retainer_name  TEXT    NOT NULL,
+                 observed_at    INTEGER NOT NULL,
+                 true_as_of     INTEGER,
+                 source         INTEGER NOT NULL,
+                 PRIMARY KEY (character_name, retainer_name)
+             ) WITHOUT ROWID
+             """,
+
+            // What was in that place.
+            //
+            // ordinal separates two Listings of one Ware. A Retainer may hold the same Ware in two
+            // slots at the same price, so (place, item, quality) does not identify a row - and a
+            // key that collapsed them would undercount what the Player owns by exactly the units
+            // in the second Listing. It is assigned from the reading's own price order rather than
+            // from the game's slot index, so re-reading an unchanged Retainer rewrites identical
+            // rows.
+            //
+            // unit_price is NULL for anything not listed: stock is held, not offered, and 0 is a
+            // legal asking price.
+            //
+            // The foreign key is what makes a row with no reading behind it impossible. Such a row
+            // would be units with no age and no Source, which is precisely the thing this ticket
+            // exists to refuse.
+            $"""
+             CREATE TABLE {Holding} (
+                 character_name TEXT    NOT NULL,
+                 retainer_name  TEXT    NOT NULL,
+                 place          INTEGER NOT NULL,
+                 item_id        INTEGER NOT NULL,
+                 quality        INTEGER NOT NULL,
+                 ordinal        INTEGER NOT NULL,
+                 units          INTEGER NOT NULL,
+                 unit_price     INTEGER,
+                 PRIMARY KEY (character_name, retainer_name, place, item_id, quality, ordinal),
+                 FOREIGN KEY (character_name, retainer_name)
+                     REFERENCES {HoldingReading} (character_name, retainer_name)
+                     ON DELETE CASCADE
+             ) WITHOUT ROWID
+             """,
         ]),
     ];
 
